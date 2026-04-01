@@ -23,7 +23,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-1 overflow-y-auto pb-20">
-        {activeTab === "home" && <Dashboard onNavigate={setActiveTab} />}
+        {activeTab === "home" && <Dashboard onNavigate={(tab) => setActiveTab(tab as TabId)} />}
         {activeTab === "learn" && <LearningScreen />}
         {activeTab === "progress" && <ProgressScreen />}
         {activeTab === "projects" && <ProjectsScreen />}
