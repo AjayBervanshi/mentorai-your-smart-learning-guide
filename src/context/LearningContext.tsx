@@ -1,14 +1,17 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
-import type { UserProfile, UserSkill, SkillLevel, UserGoal, DailyTime, Topic } from "@/types/learning";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import type { UserProfile, UserSkill, SkillLevel, UserGoal, DailyTime, Topic, AppState } from "@/types/learning";
 
 interface LearningContextType {
+  appState: AppState;
   profile: UserProfile | null;
   isOnboarded: boolean;
-  completeOnboarding: (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => void;
+  completeOnboarding: (name: string, skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => void;
   updateSkillProgress: (skillId: string, topicId: string, score: number) => void;
   getActiveSkill: () => UserSkill | null;
   setActiveSkillId: (id: string) => void;
   activeSkillId: string | null;
+  switchUser: (userId: string | null) => void;
+  deleteUser: (userId: string) => void;
 }
 
 const LearningContext = createContext<LearningContextType | null>(null);
@@ -47,12 +50,41 @@ const generateTopics = (skillName: string, level: SkillLevel): Topic[] => {
   }));
 };
 
+const STORAGE_KEY = "skill-tracker-app-state";
+
 export function LearningProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [appState, setAppState] = useState<AppState>(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error("Failed to parse stored state", e);
+      }
+    }
+    return { users: [], activeUserId: null };
+  });
+
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+  }, [appState]);
+
+  const profile = appState.activeUserId ? (appState.users.find(u => u.id === appState.activeUserId) || null) : null;
+
+  const updateProfile = useCallback((updater: (p: UserProfile) => UserProfile) => {
+    setAppState(prev => {
+      if (!prev.activeUserId) return prev;
+      return {
+        ...prev,
+        users: prev.users.map(u => u.id === prev.activeUserId ? updater(u) : u)
+      };
+    });
+  }, []);
+
   const completeOnboarding = useCallback(
-    (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => {
+    (name: string, skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => {
       const userSkills: UserSkill[] = skills.map((s) => ({
         id: s.name.toLowerCase().replace(/\s/g, "-"),
         name: s.name,
@@ -64,14 +96,22 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
         topics: generateTopics(s.name, s.level),
       }));
 
-      setProfile({
+      const newUser: UserProfile = {
+        id: crypto.randomUUID(),
+        name,
         skills: userSkills,
         goal,
         dailyTime,
         streak: 0,
         totalXP: 0,
         joinedDate: new Date().toISOString(),
-      });
+        lastActive: new Date().toISOString()
+      };
+
+      setAppState(prev => ({
+        users: [...prev.users, newUser],
+        activeUserId: newUser.id
+      }));
       setActiveSkillId(userSkills[0]?.id ?? null);
     },
     []
@@ -79,8 +119,7 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
 
   const updateSkillProgress = useCallback(
     (skillId: string, topicId: string, score: number) => {
-      setProfile((prev) => {
-        if (!prev) return prev;
+      updateProfile((prev) => {
         const skills = prev.skills.map((skill) => {
           if (skill.id !== skillId) return skill;
           const topics = skill.topics.map((t) =>
@@ -97,10 +136,15 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
             currentTopicIndex: Math.min(completed, topics.length - 1),
           };
         });
-        return { ...prev, skills, totalXP: prev.totalXP + score };
+        return {
+          ...prev,
+          skills,
+          totalXP: prev.totalXP + score,
+          lastActive: new Date().toISOString()
+        };
       });
     },
-    []
+    [updateProfile]
   );
 
   const getActiveSkill = useCallback(() => {
@@ -108,9 +152,34 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
     return profile.skills.find((s) => s.id === activeSkillId) ?? null;
   }, [profile, activeSkillId]);
 
+  const switchUser = useCallback((userId: string | null) => {
+    setAppState(prev => ({ ...prev, activeUserId: userId }));
+    if (userId) {
+      updateProfile(p => ({ ...p, lastActive: new Date().toISOString() }));
+    }
+  }, [updateProfile]);
+
+  const deleteUser = useCallback((userId: string) => {
+    setAppState(prev => ({
+      users: prev.users.filter(u => u.id !== userId),
+      activeUserId: prev.activeUserId === userId ? null : prev.activeUserId
+    }));
+  }, []);
+
   return (
     <LearningContext.Provider
-      value={{ profile, isOnboarded: !!profile, completeOnboarding, updateSkillProgress, getActiveSkill, setActiveSkillId, activeSkillId }}
+      value={{
+        appState,
+        profile,
+        isOnboarded: !!profile,
+        completeOnboarding,
+        updateSkillProgress,
+        getActiveSkill,
+        setActiveSkillId,
+        activeSkillId,
+        switchUser,
+        deleteUser
+      }}
     >
       {children}
     </LearningContext.Provider>

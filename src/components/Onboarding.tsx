@@ -1,17 +1,18 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket } from "lucide-react";
+import { User, Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SkillLevel, UserGoal, DailyTime } from "@/types/learning";
 import { useLearning } from "@/context/LearningContext";
 
-const steps = ["skills", "level", "goal", "time"] as const;
+const steps = ["name", "skills", "level", "goal", "time"] as const;
 type Step = typeof steps[number];
 
 export default function Onboarding() {
   const { completeOnboarding } = useLearning();
-  const [step, setStep] = useState<Step>("skills");
+  const [step, setStep] = useState<Step>("name");
+  const [userName, setUserName] = useState("");
   const [skills, setSkills] = useState<{ name: string; level: SkillLevel }[]>([]);
   const [currentSkill, setCurrentSkill] = useState("");
   const [currentLevel, setCurrentLevel] = useState<SkillLevel>("beginner");
@@ -30,7 +31,7 @@ export default function Onboarding() {
   const next = () => {
     const i = steps.indexOf(step);
     if (i < steps.length - 1) setStep(steps[i + 1]);
-    else completeOnboarding(skills, goal, dailyTime);
+    else completeOnboarding(userName.trim() || "Learner", skills, goal, dailyTime);
   };
 
   const prev = () => {
@@ -38,7 +39,7 @@ export default function Onboarding() {
     if (i > 0) setStep(steps[i - 1]);
   };
 
-  const canNext = step === "skills" ? skills.length > 0 : true;
+  const canNext = step === "name" ? userName.trim().length > 0 : step === "skills" ? skills.length > 0 : true;
 
   const stepIndex = steps.indexOf(step);
 
@@ -54,6 +55,29 @@ export default function Onboarding() {
 
         <AnimatePresence mode="wait">
           <motion.div key={step} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
+
+            {step === "name" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4">
+                    <User className="w-7 h-7 text-primary-foreground" />
+                  </div>
+                  <h1 className="text-3xl font-bold text-foreground">What's your name?</h1>
+                  <p className="text-muted-foreground">This helps keep your learning journey separate from others.</p>
+                </div>
+                <div className="space-y-3">
+                  <Input
+                    placeholder="e.g. Alex"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && canNext && next()}
+                    className="bg-secondary border-border h-12 text-lg"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
+
             {step === "skills" && (
               <div className="space-y-6">
                 <div className="space-y-2">

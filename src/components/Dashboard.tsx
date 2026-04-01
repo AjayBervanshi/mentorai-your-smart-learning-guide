@@ -1,14 +1,16 @@
 import { motion } from "framer-motion";
-import { Flame, Zap, BookOpen, ChevronRight, Trophy } from "lucide-react";
+import { Flame, Zap, BookOpen, ChevronRight, Trophy, Users } from "lucide-react";
 import { useLearning } from "@/context/LearningContext";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 interface DashboardProps {
   onNavigate: (tab: string) => void;
+  onSwitchUser?: () => void;
 }
 
-export default function Dashboard({ onNavigate }: DashboardProps) {
-  const { profile, setActiveSkillId } = useLearning();
+export default function Dashboard({ onNavigate, onSwitchUser }: DashboardProps) {
+  const { profile, setActiveSkillId, switchUser } = useLearning();
   if (!profile) return null;
 
   const totalProgress = profile.skills.length
@@ -18,9 +20,22 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   return (
     <div className="p-4 max-w-lg mx-auto space-y-6">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-1 pt-4">
-        <h1 className="text-2xl font-bold text-foreground">Welcome back! 👋</h1>
-        <p className="text-muted-foreground text-sm">Continue your learning journey</p>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-1 pt-4 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Welcome back, {profile.name}! 👋</h1>
+          <p className="text-muted-foreground text-sm">Continue your learning journey</p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            switchUser(null);
+            if (onSwitchUser) onSwitchUser();
+          }}
+          className="shrink-0"
+        >
+          <Users className="w-4 h-4" />
+        </Button>
       </motion.div>
 
       {/* Stats row */}

@@ -17,13 +17,17 @@ const tabs = [
 
 type TabId = typeof tabs[number]["id"];
 
-export default function AppLayout() {
+interface AppLayoutProps {
+  onSwitchUser?: () => void;
+}
+
+export default function AppLayout({ onSwitchUser }: AppLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabId>("home");
 
   return (
     <div className="min-h-screen flex flex-col">
       <main className="flex-1 overflow-y-auto pb-20">
-        {activeTab === "home" && <Dashboard onNavigate={(tab) => setActiveTab(tab as TabId)} />}
+        {activeTab === "home" && <Dashboard onNavigate={(tab) => setActiveTab(tab as TabId)} onSwitchUser={onSwitchUser} />}
         {activeTab === "learn" && <LearningScreen />}
         {activeTab === "progress" && <ProgressScreen />}
         {activeTab === "projects" && <ProjectsScreen />}
