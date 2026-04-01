@@ -1,0 +1,236 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import type { SkillLevel, UserGoal, DailyTime } from "@/types/learning";
+import { useLearning } from "@/context/LearningContext";
+
+const steps = ["skills", "level", "goal", "time"] as const;
+type Step = typeof steps[number];
+
+export default function Onboarding() {
+  const { completeOnboarding } = useLearning();
+  const [step, setStep] = useState<Step>("skills");
+  const [skills, setSkills] = useState<{ name: string; level: SkillLevel }[]>([]);
+  const [currentSkill, setCurrentSkill] = useState("");
+  const [currentLevel, setCurrentLevel] = useState<SkillLevel>("beginner");
+  const [goal, setGoal] = useState<UserGoal>("job");
+  const [dailyTime, setDailyTime] = useState<DailyTime>(30);
+
+  const addSkill = () => {
+    if (currentSkill.trim() && !skills.find((s) => s.name.toLowerCase() === currentSkill.trim().toLowerCase())) {
+      setSkills([...skills, { name: currentSkill.trim(), level: currentLevel }]);
+      setCurrentSkill("");
+    }
+  };
+
+  const removeSkill = (name: string) => setSkills(skills.filter((s) => s.name !== name));
+
+  const next = () => {
+    const i = steps.indexOf(step);
+    if (i < steps.length - 1) setStep(steps[i + 1]);
+    else completeOnboarding(skills, goal, dailyTime);
+  };
+
+  const prev = () => {
+    const i = steps.indexOf(step);
+    if (i > 0) setStep(steps[i - 1]);
+  };
+
+  const canNext = step === "skills" ? skills.length > 0 : true;
+
+  const stepIndex = steps.indexOf(step);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg">
+        {/* Progress */}
+        <div className="flex gap-2 mb-8">
+          {steps.map((_, i) => (
+            <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i <= stepIndex ? "gradient-primary" : "bg-secondary"}`} />
+          ))}
+        </div>
+
+        <AnimatePresence mode="wait">
+          <motion.div key={step} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
+            {step === "skills" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4">
+                    <Brain className="w-7 h-7 text-primary-foreground" />
+                  </div>
+                  <h1 className="text-3xl font-bold text-foreground">What do you want to learn?</h1>
+                  <p className="text-muted-foreground">Add one or more skills. You can always add more later.</p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. Python, UI Design, Marketing..."
+                    value={currentSkill}
+                    onChange={(e) => setCurrentSkill(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addSkill()}
+                    className="bg-secondary border-border"
+                  />
+                  <Button onClick={addSkill} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
+                    <Plus className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                {/* Level selector for current skill */}
+                <div className="flex gap-2">
+                  {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setCurrentLevel(l)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
+                        currentLevel === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+
+                {skills.length > 0 && (
+                  <div className="space-y-2">
+                    {skills.map((s) => (
+                      <motion.div
+                        key={s.name}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="glass-card p-3 flex items-center justify-between"
+                      >
+                        <div>
+                          <span className="font-medium text-foreground">{s.name}</span>
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary capitalize">{s.level}</span>
+                        </div>
+                        <button onClick={() => removeSkill(s.name)} className="text-muted-foreground hover:text-destructive transition-colors">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === "level" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="w-14 h-14 rounded-2xl gradient-accent flex items-center justify-center mb-4">
+                    <Sparkles className="w-7 h-7 text-accent-foreground" />
+                  </div>
+                  <h1 className="text-3xl font-bold text-foreground">Confirm your levels</h1>
+                  <p className="text-muted-foreground">Adjust levels for each skill if needed.</p>
+                </div>
+                <div className="space-y-3">
+                  {skills.map((s, idx) => (
+                    <div key={s.name} className="glass-card p-4 space-y-3">
+                      <span className="font-semibold text-foreground">{s.name}</span>
+                      <div className="flex gap-2">
+                        {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
+                          <button
+                            key={l}
+                            onClick={() => {
+                              const updated = [...skills];
+                              updated[idx] = { ...updated[idx], level: l };
+                              setSkills(updated);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
+                              s.level === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {l}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === "goal" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="w-14 h-14 rounded-2xl gradient-warm flex items-center justify-center mb-4">
+                    <Target className="w-7 h-7 text-primary-foreground" />
+                  </div>
+                  <h1 className="text-3xl font-bold text-foreground">What's your goal?</h1>
+                  <p className="text-muted-foreground">We'll tailor your learning path accordingly.</p>
+                </div>
+                <div className="space-y-3">
+                  {([
+                    { value: "job" as UserGoal, icon: Briefcase, title: "Get a Job", desc: "Prepare for interviews and land a role" },
+                    { value: "freelance" as UserGoal, icon: Rocket, title: "Freelance", desc: "Start earning independently" },
+                    { value: "growth" as UserGoal, icon: TrendingUp, title: "Skill Growth", desc: "Level up for personal development" },
+                  ]).map((g) => (
+                    <button
+                      key={g.value}
+                      onClick={() => setGoal(g.value)}
+                      className={`w-full glass-card p-4 flex items-center gap-4 text-left transition-all ${
+                        goal === g.value ? "ring-2 ring-primary glow-primary" : "hover:bg-secondary/50"
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${goal === g.value ? "gradient-primary" : "bg-secondary"}`}>
+                        <g.icon className={`w-5 h-5 ${goal === g.value ? "text-primary-foreground" : "text-muted-foreground"}`} />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-foreground">{g.title}</div>
+                        <div className="text-sm text-muted-foreground">{g.desc}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {step === "time" && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center mb-4">
+                    <Clock className="w-7 h-7 text-primary-foreground" />
+                  </div>
+                  <h1 className="text-3xl font-bold text-foreground">Daily time commitment</h1>
+                  <p className="text-muted-foreground">Even 15 minutes a day adds up. Consistency beats intensity.</p>
+                </div>
+                <div className="space-y-3">
+                  {([15, 30, 60] as DailyTime[]).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setDailyTime(t)}
+                      className={`w-full glass-card p-4 flex items-center gap-4 text-left transition-all ${
+                        dailyTime === t ? "ring-2 ring-primary glow-primary" : "hover:bg-secondary/50"
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${dailyTime === t ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>
+                        {t}m
+                      </div>
+                      <div>
+                        <div className="font-semibold text-foreground">{t} minutes / day</div>
+                        <div className="text-sm text-muted-foreground">
+                          {t === 15 ? "Quick daily sessions" : t === 30 ? "Recommended for steady progress" : "Deep learning sessions"}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        <div className="flex justify-between mt-8">
+          <Button variant="ghost" onClick={prev} disabled={stepIndex === 0} className="text-muted-foreground">
+            Back
+          </Button>
+          <Button onClick={next} disabled={!canNext} className="gradient-primary text-primary-foreground gap-2 px-6">
+            {stepIndex === steps.length - 1 ? "Start Learning" : "Continue"}
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
