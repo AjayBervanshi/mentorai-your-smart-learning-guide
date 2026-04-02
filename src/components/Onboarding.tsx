@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket } from "lucide-react";
+import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SkillLevel, UserGoal, DailyTime } from "@/types/learning";
 import { useLearning } from "@/context/LearningContext";
+import { findMatchingSkills, isValidSkill } from "@/data/skillTemplates";
+import { toast } from "sonner";
 
 const steps = ["skills", "level", "goal", "time"] as const;
 type Step = typeof steps[number];
@@ -17,20 +19,50 @@ export default function Onboarding() {
   const [currentLevel, setCurrentLevel] = useState<SkillLevel>("beginner");
   const [goal, setGoal] = useState<UserGoal>("job");
   const [dailyTime, setDailyTime] = useState<DailyTime>(30);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
-  const addSkill = () => {
-    if (currentSkill.trim() && !skills.find((s) => s.name.toLowerCase() === currentSkill.trim().toLowerCase())) {
-      setSkills([...skills, { name: currentSkill.trim(), level: currentLevel }]);
-      setCurrentSkill("");
+  const handleSkillInput = (value: string) => {
+    setCurrentSkill(value);
+    if (value.trim().length >= 2) {
+      setSuggestions(findMatchingSkills(value));
+    } else {
+      setSuggestions([]);
     }
+  };
+
+  const addSkill = (name?: string) => {
+    const skillName = (name || currentSkill).trim();
+    if (!skillName) return;
+    if (!isValidSkill(skillName)) {
+      toast.error("Please enter a valid skill name (e.g. Python, React, Marketing)");
+      return;
+    }
+    if (skills.find((s) => s.name.toLowerCase() === skillName.toLowerCase())) {
+      toast.error("You've already added this skill");
+      return;
+    }
+    setSkills([...skills, { name: skillName, level: currentLevel }]);
+    setCurrentSkill("");
+    setSuggestions([]);
   };
 
   const removeSkill = (name: string) => setSkills(skills.filter((s) => s.name !== name));
 
-  const next = () => {
+  const next = async () => {
     const i = steps.indexOf(step);
-    if (i < steps.length - 1) setStep(steps[i + 1]);
-    else completeOnboarding(skills, goal, dailyTime);
+    if (i < steps.length - 1) {
+      setStep(steps[i + 1]);
+    } else {
+      setSaving(true);
+      try {
+        await completeOnboarding(skills, goal, dailyTime);
+      } catch {
+        toast.error("Failed to save. Please try again.");
+      } finally {
+        setSaving(false);
+      }
+    }
   };
 
   const prev = () => {
@@ -39,13 +71,11 @@ export default function Onboarding() {
   };
 
   const canNext = step === "skills" ? skills.length > 0 : true;
-
   const stepIndex = steps.indexOf(step);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-lg">
-        {/* Progress */}
         <div className="flex gap-2 mb-8">
           {steps.map((_, i) => (
             <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i <= stepIndex ? "gradient-primary" : "bg-secondary"}`} />
@@ -64,20 +94,35 @@ export default function Onboarding() {
                   <p className="text-muted-foreground">Add one or more skills. You can always add more later.</p>
                 </div>
 
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g. Python, UI Design, Marketing..."
-                    value={currentSkill}
-                    onChange={(e) => setCurrentSkill(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addSkill()}
-                    className="bg-secondary border-border"
-                  />
-                  <Button onClick={addSkill} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
-                    <Plus className="w-5 h-5" />
-                  </Button>
+                <div className="relative">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g. Python, React, Marketing..."
+                      value={currentSkill}
+                      onChange={(e) => handleSkillInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && addSkill()}
+                      className="bg-secondary border-border"
+                    />
+                    <Button onClick={() => addSkill()} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
+                      <Plus className="w-5 h-5" />
+                    </Button>
+                  </div>
+
+                  {suggestions.length > 0 && currentSkill.trim().length >= 2 && (
+                    <div className="absolute top-full left-0 right-12 mt-1 glass-card p-1 z-10">
+                      {suggestions.map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => addSkill(s)}
+                          className="w-full text-left px-3 py-2 rounded-lg text-sm text-foreground hover:bg-secondary/80 transition-colors"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Level selector for current skill */}
                 <div className="flex gap-2">
                   {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
                     <button
@@ -95,12 +140,7 @@ export default function Onboarding() {
                 {skills.length > 0 && (
                   <div className="space-y-2">
                     {skills.map((s) => (
-                      <motion.div
-                        key={s.name}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="glass-card p-3 flex items-center justify-between"
-                      >
+                      <motion.div key={s.name} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-3 flex items-center justify-between">
                         <div>
                           <span className="font-medium text-foreground">{s.name}</span>
                           <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary capitalize">{s.level}</span>
@@ -225,8 +265,8 @@ export default function Onboarding() {
           <Button variant="ghost" onClick={prev} disabled={stepIndex === 0} className="text-muted-foreground">
             Back
           </Button>
-          <Button onClick={next} disabled={!canNext} className="gradient-primary text-primary-foreground gap-2 px-6">
-            {stepIndex === steps.length - 1 ? "Start Learning" : "Continue"}
+          <Button onClick={next} disabled={!canNext || saving} className="gradient-primary text-primary-foreground gap-2 px-6">
+            {saving ? "Saving..." : stepIndex === steps.length - 1 ? "Start Learning" : "Continue"}
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>

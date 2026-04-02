@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Home, BookOpen, BarChart3, FolderKanban, MessageSquare } from "lucide-react";
+import { Home, BookOpen, BarChart3, FolderKanban, MessageSquare, LogOut } from "lucide-react";
 import Dashboard from "@/components/Dashboard";
 import LearningScreen from "@/components/LearningScreen";
 import ProgressScreen from "@/components/ProgressScreen";
 import ProjectsScreen from "@/components/ProjectsScreen";
 import InterviewScreen from "@/components/InterviewScreen";
+import { useAuth } from "@/hooks/useAuth";
 
 const tabs = [
   { id: "home", label: "Home", icon: Home },
@@ -19,9 +20,21 @@ type TabId = typeof tabs[number]["id"];
 
 export default function AppLayout() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
+  const { signOut } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Top bar with sign out */}
+      <div className="flex justify-end p-3">
+        <button
+          onClick={signOut}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-secondary/50"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Sign out
+        </button>
+      </div>
+
       <main className="flex-1 overflow-y-auto pb-20">
         {activeTab === "home" && <Dashboard onNavigate={(tab) => setActiveTab(tab as TabId)} />}
         {activeTab === "learn" && <LearningScreen />}
@@ -30,7 +43,6 @@ export default function AppLayout() {
         {activeTab === "interview" && <InterviewScreen />}
       </main>
 
-      {/* Bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 glass-card border-t border-border/50 backdrop-blur-xl z-50">
         <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
           {tabs.map((tab) => (
