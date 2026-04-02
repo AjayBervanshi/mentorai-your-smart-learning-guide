@@ -1,11 +1,14 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { getTopicsForSkill } from "@/data/skillTemplates";
 import type { UserProfile, UserSkill, SkillLevel, UserGoal, DailyTime, Topic } from "@/types/learning";
 
 interface LearningContextType {
   profile: UserProfile | null;
   isOnboarded: boolean;
-  completeOnboarding: (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => void;
-  updateSkillProgress: (skillId: string, topicId: string, score: number) => void;
+  loading: boolean;
+  completeOnboarding: (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => Promise<void>;
+  updateSkillProgress: (skillId: string, topicId: string, score: number) => Promise<void>;
   getActiveSkill: () => UserSkill | null;
   setActiveSkillId: (id: string) => void;
   activeSkillId: string | null;
@@ -13,94 +16,248 @@ interface LearningContextType {
 
 const LearningContext = createContext<LearningContextType | null>(null);
 
-const generateTopics = (skillName: string, level: SkillLevel): Topic[] => {
-  const topicSets: Record<string, { title: string; desc: string; level: SkillLevel }[]> = {
-    default: [
-      { title: `Introduction to ${skillName}`, desc: "Overview and fundamentals", level: "beginner" },
-      { title: "Core Concepts", desc: "Essential building blocks", level: "beginner" },
-      { title: "Basic Syntax & Structure", desc: "Learn the basic patterns", level: "beginner" },
-      { title: "Working with Data", desc: "Data types and manipulation", level: "beginner" },
-      { title: "Control Flow", desc: "Logic and decision making", level: "beginner" },
-      { title: "Functions & Modules", desc: "Organizing your code", level: "intermediate" },
-      { title: "Error Handling", desc: "Dealing with problems gracefully", level: "intermediate" },
-      { title: "Best Practices", desc: "Industry patterns and standards", level: "intermediate" },
-      { title: "Real-world Applications", desc: "Building practical solutions", level: "intermediate" },
-      { title: "Testing & Debugging", desc: "Ensuring quality", level: "intermediate" },
-      { title: "Advanced Patterns", desc: "Expert-level techniques", level: "advanced" },
-      { title: "Performance Optimization", desc: "Making things fast", level: "advanced" },
-      { title: "System Design", desc: "Architecture and scalability", level: "advanced" },
-      { title: "Professional Workflow", desc: "Team collaboration and tools", level: "advanced" },
-      { title: `Mastering ${skillName}`, desc: "Capstone and mastery", level: "advanced" },
-    ],
-  };
-
-  const topics = topicSets.default;
-  const startIndex = level === "beginner" ? 0 : level === "intermediate" ? 5 : 10;
-
-  return topics.slice(startIndex).map((t, i) => ({
-    id: `${skillName.toLowerCase().replace(/\s/g, "-")}-topic-${i}`,
-    title: t.title,
-    description: t.desc,
-    level: t.level,
-    completed: false,
-    subtopics: ["Concept", "Examples", "Practice", "Quiz"],
-  }));
-};
-
-export function LearningProvider({ children }: { children: React.ReactNode }) {
+export function LearningProvider({ children, userId }: { children: React.ReactNode; userId: string | null }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load user data from database
+  useEffect(() => {
+    if (!userId) {
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
+    const loadUserData = async () => {
+      setLoading(true);
+      try {
+        // Load learning profile
+        const { data: lp } = await supabase
+          .from("user_learning_profiles")
+          .select("*")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (!lp) {
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        // Load skills
+        const { data: skillRows } = await supabase
+          .from("user_skills")
+          .select("*")
+          .eq("user_id", userId);
+
+        if (!skillRows || skillRows.length === 0) {
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        // Load topics for all skills
+        const { data: topicRows } = await supabase
+          .from("user_topics")
+          .select("*")
+          .eq("user_id", userId)
+          .order("sort_order", { ascending: true });
+
+        const skills: UserSkill[] = skillRows.map((s) => {
+          const topics: Topic[] = (topicRows || [])
+            .filter((t) => t.skill_id === s.id)
+            .map((t) => ({
+              id: t.id,
+              title: t.title,
+              description: t.description || "",
+              level: t.level as SkillLevel,
+              completed: t.completed || false,
+              score: t.score ?? undefined,
+              subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+            }));
+
+          const completedTopics = topics.filter((t) => t.completed).map((t) => t.id);
+          const weakTopics = topics.filter((t) => t.score !== undefined && t.score < 60).map((t) => t.id);
+
+          return {
+            id: s.id,
+            name: s.name,
+            level: s.level as SkillLevel,
+            progress: s.progress || 0,
+            currentTopicIndex: s.current_topic_index || 0,
+            weakTopics,
+            completedTopics,
+            topics,
+          };
+        });
+
+        setProfile({
+          skills,
+          goal: lp.goal as UserGoal,
+          dailyTime: lp.daily_time as DailyTime,
+          streak: lp.streak || 0,
+          totalXP: lp.total_xp || 0,
+          joinedDate: lp.joined_date || new Date().toISOString(),
+        });
+
+        setActiveSkillId(skills[0]?.id ?? null);
+      } catch (err) {
+        console.error("Failed to load user data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [userId]);
 
   const completeOnboarding = useCallback(
-    (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => {
-      const userSkills: UserSkill[] = skills.map((s) => ({
-        id: s.name.toLowerCase().replace(/\s/g, "-"),
-        name: s.name,
-        level: s.level,
-        progress: 0,
-        currentTopicIndex: 0,
-        weakTopics: [],
-        completedTopics: [],
-        topics: generateTopics(s.name, s.level),
-      }));
+    async (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => {
+      if (!userId) return;
 
-      setProfile({
-        skills: userSkills,
-        goal,
-        dailyTime,
-        streak: 0,
-        totalXP: 0,
-        joinedDate: new Date().toISOString(),
-      });
-      setActiveSkillId(userSkills[0]?.id ?? null);
+      try {
+        // Insert learning profile
+        const { error: lpError } = await supabase.from("user_learning_profiles").insert({
+          user_id: userId,
+          goal,
+          daily_time: dailyTime,
+        });
+        if (lpError) throw lpError;
+
+        const userSkills: UserSkill[] = [];
+
+        for (const s of skills) {
+          // Insert skill
+          const { data: skillData, error: skillError } = await supabase
+            .from("user_skills")
+            .insert({
+              user_id: userId,
+              name: s.name,
+              level: s.level,
+            })
+            .select()
+            .single();
+          if (skillError) throw skillError;
+
+          // Generate topics from templates
+          const topicTemplates = getTopicsForSkill(s.name, s.level);
+          const topicInserts = topicTemplates.map((t, i) => ({
+            skill_id: skillData.id,
+            user_id: userId,
+            title: t.title,
+            description: t.description,
+            level: t.level,
+            sort_order: i,
+            subtopics: t.subtopics,
+          }));
+
+          const { data: topicData, error: topicError } = await supabase
+            .from("user_topics")
+            .insert(topicInserts)
+            .select();
+          if (topicError) throw topicError;
+
+          const topics: Topic[] = (topicData || []).map((t) => ({
+            id: t.id,
+            title: t.title,
+            description: t.description || "",
+            level: t.level as SkillLevel,
+            completed: false,
+            subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+          }));
+
+          userSkills.push({
+            id: skillData.id,
+            name: s.name,
+            level: s.level,
+            progress: 0,
+            currentTopicIndex: 0,
+            weakTopics: [],
+            completedTopics: [],
+            topics,
+          });
+        }
+
+        setProfile({
+          skills: userSkills,
+          goal,
+          dailyTime,
+          streak: 0,
+          totalXP: 0,
+          joinedDate: new Date().toISOString(),
+        });
+        setActiveSkillId(userSkills[0]?.id ?? null);
+      } catch (err) {
+        console.error("Failed to save onboarding:", err);
+        throw err;
+      }
     },
-    []
+    [userId]
   );
 
   const updateSkillProgress = useCallback(
-    (skillId: string, topicId: string, score: number) => {
-      setProfile((prev) => {
-        if (!prev) return prev;
-        const skills = prev.skills.map((skill) => {
-          if (skill.id !== skillId) return skill;
-          const topics = skill.topics.map((t) =>
-            t.id === topicId ? { ...t, completed: score >= 60, score } : t
-          );
-          const completed = topics.filter((t) => t.completed).length;
-          const weak = topics.filter((t) => t.score !== undefined && t.score < 60).map((t) => t.id);
-          return {
-            ...skill,
-            topics,
-            progress: Math.round((completed / topics.length) * 100),
-            completedTopics: topics.filter((t) => t.completed).map((t) => t.id),
-            weakTopics: weak,
-            currentTopicIndex: Math.min(completed, topics.length - 1),
-          };
+    async (skillId: string, topicId: string, score: number) => {
+      if (!userId) return;
+
+      try {
+        // Update topic
+        await supabase
+          .from("user_topics")
+          .update({ completed: score >= 60, score })
+          .eq("id", topicId)
+          .eq("user_id", userId);
+
+        // Recalculate skill progress
+        const { data: allTopics } = await supabase
+          .from("user_topics")
+          .select("*")
+          .eq("skill_id", skillId)
+          .eq("user_id", userId);
+
+        if (allTopics) {
+          const completed = allTopics.filter((t) => t.completed).length;
+          const progress = Math.round((completed / allTopics.length) * 100);
+
+          await supabase
+            .from("user_skills")
+            .update({ progress, current_topic_index: Math.min(completed, allTopics.length - 1) })
+            .eq("id", skillId)
+            .eq("user_id", userId);
+
+          // Update XP
+          await supabase
+            .from("user_learning_profiles")
+            .update({ total_xp: (profile?.totalXP || 0) + score })
+            .eq("user_id", userId);
+        }
+
+        // Update local state
+        setProfile((prev) => {
+          if (!prev) return prev;
+          const skills = prev.skills.map((skill) => {
+            if (skill.id !== skillId) return skill;
+            const topics = skill.topics.map((t) =>
+              t.id === topicId ? { ...t, completed: score >= 60, score } : t
+            );
+            const completedCount = topics.filter((t) => t.completed).length;
+            const weak = topics.filter((t) => t.score !== undefined && t.score < 60).map((t) => t.id);
+            return {
+              ...skill,
+              topics,
+              progress: Math.round((completedCount / topics.length) * 100),
+              completedTopics: topics.filter((t) => t.completed).map((t) => t.id),
+              weakTopics: weak,
+              currentTopicIndex: Math.min(completedCount, topics.length - 1),
+            };
+          });
+          return { ...prev, skills, totalXP: prev.totalXP + score };
         });
-        return { ...prev, skills, totalXP: prev.totalXP + score };
-      });
+      } catch (err) {
+        console.error("Failed to update progress:", err);
+      }
     },
-    []
+    [userId, profile?.totalXP]
   );
 
   const getActiveSkill = useCallback(() => {
@@ -110,7 +267,7 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LearningContext.Provider
-      value={{ profile, isOnboarded: !!profile, completeOnboarding, updateSkillProgress, getActiveSkill, setActiveSkillId, activeSkillId }}
+      value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, getActiveSkill, setActiveSkillId, activeSkillId }}
     >
       {children}
     </LearningContext.Provider>
