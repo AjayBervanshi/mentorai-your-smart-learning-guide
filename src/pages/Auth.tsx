@@ -16,6 +16,14 @@ export default function Auth() {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) return;
+
+    // Security Enhancement: Input validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      toast.error("Invalid email format");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -34,8 +42,10 @@ export default function Auth() {
         });
         if (error) throw error;
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err: unknown) {
+      // Security Fix: Do not leak detailed error messages to user
+      console.error('Email authentication failed:', err);
+      toast.error("Authentication failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -48,11 +58,15 @@ export default function Auth() {
         redirect_uri: window.location.origin,
       });
       if (result.error) {
-        toast.error(result.error.message || "Google sign-in failed");
+        // Security Fix: Do not leak detailed error messages to user
+        console.error('Google sign-in error from provider:', result.error);
+        toast.error("Google sign-in failed. Please try again.");
       }
       if (result.redirected) return;
-    } catch (err: any) {
-      toast.error(err.message || "Google sign-in failed");
+    } catch (err: unknown) {
+      // Security Fix: Do not leak detailed error messages to user
+      console.error('Google sign-in exception:', err);
+      toast.error("Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
