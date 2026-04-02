@@ -97,13 +97,14 @@ export default function Onboarding() {
                 <div className="relative">
                   <div className="flex gap-2">
                     <Input
+                      aria-label="Skill to learn"
                       placeholder="e.g. Python, React, Marketing..."
                       value={currentSkill}
                       onChange={(e) => handleSkillInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && addSkill()}
                       className="bg-secondary border-border"
                     />
-                    <Button onClick={() => addSkill()} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
+                    <Button aria-label="Add skill" onClick={() => addSkill()} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
                       <Plus className="w-5 h-5" />
                     </Button>
                   </div>
@@ -123,11 +124,12 @@ export default function Onboarding() {
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2" role="group" aria-label="Skill proficiency level">
                   {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
                     <button
                       key={l}
                       onClick={() => setCurrentLevel(l)}
+                      aria-pressed={currentLevel === l}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
                         currentLevel === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                       }`}
@@ -138,14 +140,14 @@ export default function Onboarding() {
                 </div>
 
                 {skills.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-2" aria-label="Added skills">
                     {skills.map((s) => (
                       <motion.div key={s.name} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-3 flex items-center justify-between">
                         <div>
                           <span className="font-medium text-foreground">{s.name}</span>
                           <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary capitalize">{s.level}</span>
                         </div>
-                        <button onClick={() => removeSkill(s.name)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <button aria-label={`Remove ${s.name}`} onClick={() => removeSkill(s.name)} className="text-muted-foreground hover:text-destructive transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       </motion.div>
@@ -167,8 +169,8 @@ export default function Onboarding() {
                 <div className="space-y-3">
                   {skills.map((s, idx) => (
                     <div key={s.name} className="glass-card p-4 space-y-3">
-                      <span className="font-semibold text-foreground">{s.name}</span>
-                      <div className="flex gap-2">
+                      <span className="font-semibold text-foreground" id={`skill-level-label-${idx}`}>{s.name}</span>
+                      <div className="flex gap-2" role="group" aria-labelledby={`skill-level-label-${idx}`}>
                         {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
                           <button
                             key={l}
@@ -177,6 +179,7 @@ export default function Onboarding() {
                               updated[idx] = { ...updated[idx], level: l };
                               setSkills(updated);
                             }}
+                            aria-pressed={s.level === l}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
                               s.level === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                             }`}
@@ -200,7 +203,7 @@ export default function Onboarding() {
                   <h1 className="text-3xl font-bold text-foreground">What's your goal?</h1>
                   <p className="text-muted-foreground">We'll tailor your learning path accordingly.</p>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3" role="group" aria-label="Learning goals">
                   {([
                     { value: "job" as UserGoal, icon: Briefcase, title: "Get a Job", desc: "Prepare for interviews and land a role" },
                     { value: "freelance" as UserGoal, icon: Rocket, title: "Freelance", desc: "Start earning independently" },
@@ -209,6 +212,7 @@ export default function Onboarding() {
                     <button
                       key={g.value}
                       onClick={() => setGoal(g.value)}
+                      aria-pressed={goal === g.value}
                       className={`w-full glass-card p-4 flex items-center gap-4 text-left transition-all ${
                         goal === g.value ? "ring-2 ring-primary glow-primary" : "hover:bg-secondary/50"
                       }`}
@@ -235,11 +239,12 @@ export default function Onboarding() {
                   <h1 className="text-3xl font-bold text-foreground">Daily time commitment</h1>
                   <p className="text-muted-foreground">Even 15 minutes a day adds up. Consistency beats intensity.</p>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3" role="group" aria-label="Daily time commitment">
                   {([15, 30, 60] as DailyTime[]).map((t) => (
                     <button
                       key={t}
                       onClick={() => setDailyTime(t)}
+                      aria-pressed={dailyTime === t}
                       className={`w-full glass-card p-4 flex items-center gap-4 text-left transition-all ${
                         dailyTime === t ? "ring-2 ring-primary glow-primary" : "hover:bg-secondary/50"
                       }`}
