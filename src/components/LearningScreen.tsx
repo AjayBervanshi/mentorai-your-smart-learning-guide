@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lightbulb, CheckCircle2, XCircle, ChevronRight, HelpCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,9 @@ export default function LearningScreen() {
     );
   }
 
-  const quiz = generateQuiz(topic.title);
+  // ⚡ Bolt: Memoize quiz generation to avoid recreating questions and array allocations
+  // on every re-render caused by frequent state changes (e.g. answering questions, hints).
+  const quiz = useMemo(() => generateQuiz(topic.title), [topic.title]);
   const currentQ = quiz[quizIndex];
 
   const handleAnswer = (idx: number) => {
