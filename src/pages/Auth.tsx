@@ -34,8 +34,9 @@ export default function Auth() {
         });
         if (error) throw error;
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err: unknown) {
+      console.error("Authentication error during email auth", err);
+      toast.error("Authentication failed. Please check your credentials and try again.");
     } finally {
       setLoading(false);
     }
@@ -48,11 +49,13 @@ export default function Auth() {
         redirect_uri: window.location.origin,
       });
       if (result.error) {
-        toast.error(result.error.message || "Google sign-in failed");
+        console.error("Google sign-in error");
+        toast.error("Google sign-in failed. Please try again later.");
       }
       if (result.redirected) return;
-    } catch (err: any) {
-      toast.error(err.message || "Google sign-in failed");
+    } catch (err: unknown) {
+      console.error("Authentication error during Google sign-in", err);
+      toast.error("Google sign-in failed. Please try again later.");
     } finally {
       setLoading(false);
     }
