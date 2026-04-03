@@ -34,8 +34,10 @@ export default function Auth() {
         });
         if (error) throw error;
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err: unknown) {
+      // SECURITY: Avoid leaking error details to the user to prevent enumeration/recon
+      console.error("Auth error:", err);
+      toast.error(mode === "login" ? "Invalid email or password" : "Registration failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -48,11 +50,13 @@ export default function Auth() {
         redirect_uri: window.location.origin,
       });
       if (result.error) {
-        toast.error(result.error.message || "Google sign-in failed");
+        console.error("Google auth error:", result.error);
+        toast.error("Google sign-in failed. Please try again.");
       }
       if (result.redirected) return;
-    } catch (err: any) {
-      toast.error(err.message || "Google sign-in failed");
+    } catch (err: unknown) {
+      console.error("Google auth exception:", err);
+      toast.error("Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
