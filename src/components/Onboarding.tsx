@@ -97,13 +97,14 @@ export default function Onboarding() {
                 <div className="relative">
                   <div className="flex gap-2">
                     <Input
+                      aria-label="Skill to learn"
                       placeholder="e.g. Python, React, Marketing..."
                       value={currentSkill}
                       onChange={(e) => handleSkillInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && addSkill()}
                       className="bg-secondary border-border"
                     />
-                    <Button onClick={() => addSkill()} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
+                    <Button aria-label="Add skill" onClick={() => addSkill()} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
                       <Plus className="w-5 h-5" />
                     </Button>
                   </div>
@@ -145,7 +146,7 @@ export default function Onboarding() {
                           <span className="font-medium text-foreground">{s.name}</span>
                           <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary capitalize">{s.level}</span>
                         </div>
-                        <button onClick={() => removeSkill(s.name)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <button aria-label={`Remove ${s.name}`} onClick={() => removeSkill(s.name)} className="text-muted-foreground hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm">
                           <X className="w-4 h-4" />
                         </button>
                       </motion.div>
