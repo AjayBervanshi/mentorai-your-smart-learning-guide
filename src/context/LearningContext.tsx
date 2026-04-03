@@ -64,9 +64,17 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           .eq("user_id", userId)
           .order("sort_order", { ascending: true });
 
+        // ⚡ Bolt: Replace O(n²) nested loop with O(n) hash map lookup for better performance
+        const topicsBySkillId = (topicRows || []).reduce((acc: Record<string, typeof topicRows>, t) => {
+          if (!acc[t.skill_id]) {
+            acc[t.skill_id] = [];
+          }
+          acc[t.skill_id].push(t);
+          return acc;
+        }, {});
+
         const skills: UserSkill[] = skillRows.map((s) => {
-          const topics: Topic[] = (topicRows || [])
-            .filter((t) => t.skill_id === s.id)
+          const topics: Topic[] = (topicsBySkillId[s.id] || [])
             .map((t) => ({
               id: t.id,
               title: t.title,
