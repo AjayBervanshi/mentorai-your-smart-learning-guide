@@ -125,59 +125,59 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         });
         if (lpError) throw lpError;
 
-        const userSkills: UserSkill[] = [];
+        const userSkills: UserSkill[] = await Promise.all(
+          skills.map(async (s) => {
+            // Insert skill
+            const { data: skillData, error: skillError } = await supabase
+              .from("user_skills")
+              .insert({
+                user_id: userId,
+                name: s.name,
+                level: s.level,
+              })
+              .select()
+              .single();
+            if (skillError) throw skillError;
 
-        for (const s of skills) {
-          // Insert skill
-          const { data: skillData, error: skillError } = await supabase
-            .from("user_skills")
-            .insert({
+            // Generate topics from templates
+            const topicTemplates = getTopicsForSkill(s.name, s.level);
+            const topicInserts = topicTemplates.map((t, i) => ({
+              skill_id: skillData.id,
               user_id: userId,
+              title: t.title,
+              description: t.description,
+              level: t.level,
+              sort_order: i,
+              subtopics: t.subtopics,
+            }));
+
+            const { data: topicData, error: topicError } = await supabase
+              .from("user_topics")
+              .insert(topicInserts)
+              .select();
+            if (topicError) throw topicError;
+
+            const topics: Topic[] = (topicData || []).map((t) => ({
+              id: t.id,
+              title: t.title,
+              description: t.description || "",
+              level: t.level as SkillLevel,
+              completed: false,
+              subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+            }));
+
+            return {
+              id: skillData.id,
               name: s.name,
               level: s.level,
-            })
-            .select()
-            .single();
-          if (skillError) throw skillError;
-
-          // Generate topics from templates
-          const topicTemplates = getTopicsForSkill(s.name, s.level);
-          const topicInserts = topicTemplates.map((t, i) => ({
-            skill_id: skillData.id,
-            user_id: userId,
-            title: t.title,
-            description: t.description,
-            level: t.level,
-            sort_order: i,
-            subtopics: t.subtopics,
-          }));
-
-          const { data: topicData, error: topicError } = await supabase
-            .from("user_topics")
-            .insert(topicInserts)
-            .select();
-          if (topicError) throw topicError;
-
-          const topics: Topic[] = (topicData || []).map((t) => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || "",
-            level: t.level as SkillLevel,
-            completed: false,
-            subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
-          }));
-
-          userSkills.push({
-            id: skillData.id,
-            name: s.name,
-            level: s.level,
-            progress: 0,
-            currentTopicIndex: 0,
-            weakTopics: [],
-            completedTopics: [],
-            topics,
-          });
-        }
+              progress: 0,
+              currentTopicIndex: 0,
+              weakTopics: [],
+              completedTopics: [],
+              topics,
+            };
+          })
+        );
 
         setProfile({
           skills: userSkills,
@@ -219,17 +219,18 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           const completed = allTopics.filter((t) => t.completed).length;
           const progress = Math.round((completed / allTopics.length) * 100);
 
-          await supabase
-            .from("user_skills")
-            .update({ progress, current_topic_index: Math.min(completed, allTopics.length - 1) })
-            .eq("id", skillId)
-            .eq("user_id", userId);
-
-          // Update XP
-          await supabase
-            .from("user_learning_profiles")
-            .update({ total_xp: (profile?.totalXP || 0) + score })
-            .eq("user_id", userId);
+          await Promise.all([
+            supabase
+              .from("user_skills")
+              .update({ progress, current_topic_index: Math.min(completed, allTopics.length - 1) })
+              .eq("id", skillId)
+              .eq("user_id", userId),
+            // Update XP
+            supabase
+              .from("user_learning_profiles")
+              .update({ total_xp: (profile?.totalXP || 0) + score })
+              .eq("user_id", userId),
+          ]);
         }
 
         // Update local state
