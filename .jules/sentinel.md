@@ -1,0 +1,4 @@
+## 2024-04-04 - Authentication Error Details Leakage
+**Vulnerability:** The authentication form (`src/pages/Auth.tsx`) was displaying raw error messages from Supabase directly to the user via toast notifications (`toast.error(err.message || "Authentication failed")`). This could potentially expose internal backend details or user enumeration vulnerabilities.
+**Learning:** Returning raw backend error messages directly to the UI is a security risk as it violates the principle of failing securely. Error handling should distinguish between internal logging and user-facing messages.
+**Prevention:** Always log the actual error internally (`console.error`) and present a generic, secure error message to the user (e.g., "Authentication failed. Please check your credentials and try again."). Additionally, use `catch (err)` without the explicit `any` type to improve type safety and maintain code quality.

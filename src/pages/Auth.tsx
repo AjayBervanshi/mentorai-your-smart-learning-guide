@@ -34,8 +34,9 @@ export default function Auth() {
         });
         if (error) throw error;
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err) {
+      console.error("Authentication error:", err);
+      toast.error("Authentication failed. Please check your credentials and try again.");
     } finally {
       setLoading(false);
     }
@@ -48,11 +49,13 @@ export default function Auth() {
         redirect_uri: window.location.origin,
       });
       if (result.error) {
-        toast.error(result.error.message || "Google sign-in failed");
+        console.error("Google auth error:", result.error);
+        toast.error("Google sign-in failed. Please try again.");
       }
       if (result.redirected) return;
-    } catch (err: any) {
-      toast.error(err.message || "Google sign-in failed");
+    } catch (err) {
+      console.error("Google auth error:", err);
+      toast.error("Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -115,7 +118,7 @@ export default function Auth() {
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 bg-secondary border-border"
               required
-              minLength={6}
+              minLength={mode === "signup" ? 8 : undefined}
             />
           </div>
           <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground gap-2">
