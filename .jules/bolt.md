@@ -1,0 +1,3 @@
+## 2024-05-18 - [Network] Eliminate Supabase Request Waterfalls
+**Learning:** Performing sequential fetch and update requests to Supabase causes network waterfalls, creating severe loading and updating bottlenecks (e.g., waiting for `user_learning_profiles`, then `user_skills`, then `user_topics`). Furthermore, intermediate states can often be derived from existing client state without needing a completely new database read.
+**Action:** Always batch independent Supabase network queries using `Promise.all()`. Also, derive data locally whenever possible (e.g., recalculating progress percentages locally based on current topic updates) to eliminate redundant read queries entirely.
