@@ -32,37 +32,33 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     const loadUserData = async () => {
       setLoading(true);
       try {
-        // Load learning profile
-        const { data: lp } = await supabase
-          .from("user_learning_profiles")
-          .select("*")
-          .eq("user_id", userId)
-          .maybeSingle();
+        // Batch independent queries for profile, skills, and topics to avoid network waterfalls
+        const [
+          { data: lp },
+          { data: skillRows },
+          { data: topicRows }
+        ] = await Promise.all([
+          supabase
+            .from("user_learning_profiles")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle(),
+          supabase
+            .from("user_skills")
+            .select("*")
+            .eq("user_id", userId),
+          supabase
+            .from("user_topics")
+            .select("*")
+            .eq("user_id", userId)
+            .order("sort_order", { ascending: true })
+        ]);
 
-        if (!lp) {
+        if (!lp || !skillRows || skillRows.length === 0) {
           setProfile(null);
           setLoading(false);
           return;
         }
-
-        // Load skills
-        const { data: skillRows } = await supabase
-          .from("user_skills")
-          .select("*")
-          .eq("user_id", userId);
-
-        if (!skillRows || skillRows.length === 0) {
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-
-        // Load topics for all skills
-        const { data: topicRows } = await supabase
-          .from("user_topics")
-          .select("*")
-          .eq("user_id", userId)
-          .order("sort_order", { ascending: true });
 
         const skills: UserSkill[] = skillRows.map((s) => {
           const topics: Topic[] = (topicRows || [])
@@ -198,39 +194,39 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
   const updateSkillProgress = useCallback(
     async (skillId: string, topicId: string, score: number) => {
-      if (!userId) return;
+      if (!userId || !profile) return;
 
       try {
-        // Update topic
-        await supabase
-          .from("user_topics")
-          .update({ completed: score >= 60, score })
-          .eq("id", topicId)
-          .eq("user_id", userId);
+        // Derive state locally instead of making another database read
+        const skill = profile.skills.find(s => s.id === skillId);
+        if (!skill) return;
 
-        // Recalculate skill progress
-        const { data: allTopics } = await supabase
-          .from("user_topics")
-          .select("*")
-          .eq("skill_id", skillId)
-          .eq("user_id", userId);
+        const updatedTopics = skill.topics.map(t =>
+          t.id === topicId ? { ...t, completed: score >= 60, score } : t
+        );
 
-        if (allTopics) {
-          const completed = allTopics.filter((t) => t.completed).length;
-          const progress = Math.round((completed / allTopics.length) * 100);
+        const completedCount = updatedTopics.filter((t) => t.completed).length;
+        const progress = Math.round((completedCount / updatedTopics.length) * 100);
+        const currentTopicIndex = Math.min(completedCount, updatedTopics.length - 1);
+        const newTotalXP = profile.totalXP + score;
 
-          await supabase
+        // Batch update requests
+        await Promise.all([
+          supabase
+            .from("user_topics")
+            .update({ completed: score >= 60, score })
+            .eq("id", topicId)
+            .eq("user_id", userId),
+          supabase
             .from("user_skills")
-            .update({ progress, current_topic_index: Math.min(completed, allTopics.length - 1) })
+            .update({ progress, current_topic_index: currentTopicIndex })
             .eq("id", skillId)
-            .eq("user_id", userId);
-
-          // Update XP
-          await supabase
+            .eq("user_id", userId),
+          supabase
             .from("user_learning_profiles")
-            .update({ total_xp: (profile?.totalXP || 0) + score })
-            .eq("user_id", userId);
-        }
+            .update({ total_xp: newTotalXP })
+            .eq("user_id", userId)
+        ]);
 
         // Update local state
         setProfile((prev) => {
@@ -257,7 +253,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         console.error("Failed to update progress:", err);
       }
     },
-    [userId, profile?.totalXP]
+    [userId, profile]
   );
 
   const getActiveSkill = useCallback(() => {
