@@ -103,7 +103,7 @@ export default function Onboarding() {
                       onKeyDown={(e) => e.key === "Enter" && addSkill()}
                       className="bg-secondary border-border"
                     />
-                    <Button onClick={() => addSkill()} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
+                    <Button onClick={() => addSkill()} size="icon" aria-label="Add skill" className="gradient-primary shrink-0 text-primary-foreground">
                       <Plus className="w-5 h-5" />
                     </Button>
                   </div>
@@ -145,7 +145,7 @@ export default function Onboarding() {
                           <span className="font-medium text-foreground">{s.name}</span>
                           <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary capitalize">{s.level}</span>
                         </div>
-                        <button onClick={() => removeSkill(s.name)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <button onClick={() => removeSkill(s.name)} aria-label={`Remove ${s.name} skill`} className="text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm transition-colors">
                           <X className="w-4 h-4" />
                         </button>
                       </motion.div>
