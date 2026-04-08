@@ -55,7 +55,7 @@ const KNOWN_SKILLS: Record<string, SkillTemplate> = {
       { title: "React Fundamentals", description: "JSX, components, and rendering", level: "beginner", subtopics: ["What is React", "JSX syntax", "Components", "Rendering"] },
       { title: "Props & State", description: "Passing data and managing component state", level: "beginner", subtopics: ["Props basics", "useState hook", "State updates", "Lifting state"] },
       { title: "Event Handling", description: "Handling user interactions in React", level: "beginner", subtopics: ["onClick/onChange", "Form handling", "Synthetic events", "Event delegation"] },
-      { title: "Conditional Rendering & Lists", description: "Dynamic UI based on data", level: "beginner", subtopics: ["Ternary in JSX", "&&  operator", "map() for lists", "Keys"] },
+      { title: "Conditional Rendering & Lists", description: "Dynamic UI based on data", level: "beginner", subtopics: ["Ternary in JSX", "&& operator", "map() for lists", "Keys"] },
       { title: "useEffect & Side Effects", description: "Data fetching, subscriptions, cleanup", level: "beginner", subtopics: ["useEffect basics", "Dependency array", "Cleanup functions", "Fetching data"] },
       { title: "React Router", description: "Client-side routing and navigation", level: "intermediate", subtopics: ["Route setup", "Link & NavLink", "URL parameters", "Nested routes"] },
       { title: "Forms & Validation", description: "Controlled components, form libraries", level: "intermediate", subtopics: ["Controlled inputs", "Form submission", "Validation", "React Hook Form"] },
@@ -116,16 +116,13 @@ export function getSkillTemplate(skillName: string): SkillTemplate {
   return KNOWN_SKILLS[aliased] || DEFAULT_TEMPLATE;
 }
 
-export function getTopicsForSkill(
-  skillName: string,
-  level: SkillLevel
-): TopicTemplate[] {
+export function getTopicsForSkill(skillName: string, level: SkillLevel): TopicTemplate[] {
   const template = getSkillTemplate(skillName);
   const startIndex = level === "beginner" ? 0 : level === "intermediate" ? 5 : 10;
   return template.topics.slice(startIndex);
 }
 
-// Known skill categories for validation
+// Known skill categories for validation and normalization
 export const KNOWN_SKILL_CATEGORIES = [
   "Python", "JavaScript", "TypeScript", "React", "Vue", "Angular", "Node.js",
   "Java", "C++", "C#", "Go", "Rust", "Swift", "Kotlin", "Ruby", "PHP",
@@ -142,27 +139,205 @@ export const KNOWN_SKILL_CATEGORIES = [
   "Mobile Development", "Flutter", "React Native",
   "Game Development", "Unity", "Unreal Engine",
   "Blockchain", "Web3", "Solidity",
+  "Django", "Flask", "Express.js", "Next.js", "Svelte",
+  "GraphQL", "REST API", "Microservices",
+  "Power BI", "Tableau", "Excel",
+  "Photoshop", "Illustrator", "Canva",
+  "Cloud DevOps", "Terraform", "Ansible",
 ];
+
+// Levenshtein distance for fuzzy matching
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+/**
+ * Normalize a skill name to its proper display form.
+ * e.g. "pyhon" → "Python", "devops" → "DevOps", "reactjs" → "React"
+ */
+export function normalizeSkillName(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+
+  // Check aliases first (exact match)
+  if (lower in SKILL_ALIASES) {
+    const aliasKey = SKILL_ALIASES[lower];
+    // Find the proper display name from KNOWN_SKILL_CATEGORIES
+    const match = KNOWN_SKILL_CATEGORIES.find(
+      (s) => s.toLowerCase() === aliasKey || s.toLowerCase().replace(/[.\s/-]/g, "") === aliasKey.replace(/[.\s/-]/g, "")
+    );
+    return match || aliasKey.charAt(0).toUpperCase() + aliasKey.slice(1);
+  }
+
+  // Exact match in known skills
+  const exact = KNOWN_SKILL_CATEGORIES.find((s) => s.toLowerCase() === lower);
+  if (exact) return exact;
+
+  // Fuzzy match: try Levenshtein distance ≤ 2 against known skills
+  let bestMatch: string | null = null;
+  let bestDist = Infinity;
+
+  for (const skill of KNOWN_SKILL_CATEGORIES) {
+    const skillLower = skill.toLowerCase();
+    const dist = levenshtein(lower, skillLower);
+    // Also try without special chars
+    const distClean = levenshtein(
+      lower.replace(/[.\s/-]/g, ""),
+      skillLower.replace(/[.\s/-]/g, "")
+    );
+    const minDist = Math.min(dist, distClean);
+    if (minDist < bestDist) {
+      bestDist = minDist;
+      bestMatch = skill;
+    }
+  }
+
+  // Accept fuzzy match if distance ≤ 2 (or ≤ 3 for longer names)
+  const threshold = lower.length > 6 ? 3 : 2;
+  if (bestMatch && bestDist <= threshold) {
+    return bestMatch;
+  }
+
+  // No match found
+  return null;
+}
 
 export function findMatchingSkills(input: string): string[] {
   const normalized = input.toLowerCase().trim();
   if (normalized.length < 2) return [];
 
-  return KNOWN_SKILL_CATEGORIES.filter(
+  // Exact substring matches first
+  const substringMatches = KNOWN_SKILL_CATEGORIES.filter(
     (skill) =>
       skill.toLowerCase().includes(normalized) ||
       normalized.includes(skill.toLowerCase())
-  ).slice(0, 5);
+  );
+
+  if (substringMatches.length > 0) return substringMatches.slice(0, 5);
+
+  // Fuzzy matches
+  const fuzzy = KNOWN_SKILL_CATEGORIES
+    .map((skill) => ({
+      skill,
+      dist: Math.min(
+        levenshtein(normalized, skill.toLowerCase()),
+        levenshtein(normalized.replace(/[.\s/-]/g, ""), skill.toLowerCase().replace(/[.\s/-]/g, ""))
+      ),
+    }))
+    .filter((x) => x.dist <= 3)
+    .sort((a, b) => a.dist - b.dist)
+    .map((x) => x.skill);
+
+  return fuzzy.slice(0, 5);
 }
 
 export function isValidSkill(input: string): boolean {
-  const normalized = input.toLowerCase().trim();
-  if (normalized.length < 2) return false;
-  // Allow anything 2+ chars that's not pure gibberish (has vowels or is a known abbreviation)
-  const hasVowel = /[aeiou]/i.test(normalized);
-  const isKnownAlias = normalized in SKILL_ALIASES;
-  const isKnownSkill = KNOWN_SKILL_CATEGORIES.some(
-    (s) => s.toLowerCase() === normalized
-  );
-  return hasVowel || isKnownAlias || isKnownSkill;
+  return normalizeSkillName(input) !== null;
+}
+
+// Skill-category-aware project mappings
+export type SkillCategory = "coding" | "design" | "data" | "marketing" | "devops" | "general";
+
+const SKILL_CATEGORY_MAP: Record<string, SkillCategory> = {
+  python: "coding", javascript: "coding", typescript: "coding", react: "coding",
+  vue: "coding", angular: "coding", "node.js": "coding", java: "coding",
+  "c++": "coding", "c#": "coding", go: "coding", rust: "coding", swift: "coding",
+  kotlin: "coding", ruby: "coding", php: "coding", django: "coding", flask: "coding",
+  "express.js": "coding", "next.js": "coding", svelte: "coding", flutter: "coding",
+  "react native": "coding", "mobile development": "coding", "game development": "coding",
+  unity: "coding", "unreal engine": "coding", solidity: "coding",
+  sql: "data", mongodb: "data", postgresql: "data", redis: "data",
+  "data science": "data", "machine learning": "data", ai: "data", "deep learning": "data",
+  "data analysis": "data", statistics: "data", r: "data", pandas: "data",
+  "power bi": "data", tableau: "data", excel: "data", graphql: "data",
+  "ui design": "design", "ux design": "design", figma: "design", "adobe xd": "design",
+  photoshop: "design", illustrator: "design", canva: "design",
+  html: "coding", css: "coding", "tailwind css": "coding", sass: "coding",
+  marketing: "marketing", seo: "marketing", "content writing": "marketing", copywriting: "marketing",
+  docker: "devops", kubernetes: "devops", aws: "devops", azure: "devops", gcp: "devops",
+  git: "devops", linux: "devops", devops: "devops", "ci/cd": "devops",
+  "cloud devops": "devops", terraform: "devops", ansible: "devops",
+  cybersecurity: "devops", networking: "devops", "system administration": "devops",
+  blockchain: "coding", web3: "coding",
+  "project management": "general", agile: "general", scrum: "general",
+  "rest api": "coding", microservices: "devops",
+};
+
+export function getSkillCategory(skillName: string): SkillCategory {
+  return SKILL_CATEGORY_MAP[skillName.toLowerCase()] || "general";
+}
+
+export interface ProjectTemplate {
+  title: string;
+  desc: string;
+  difficulty: SkillLevel;
+  minProgress: number;
+}
+
+const PROJECT_TEMPLATES: Record<SkillCategory, ProjectTemplate[]> = {
+  coding: [
+    { title: "Build a Personal Portfolio", desc: "Create a responsive portfolio showcasing your work", difficulty: "beginner", minProgress: 0 },
+    { title: "Calculator App", desc: "Build a functional calculator with proper logic", difficulty: "beginner", minProgress: 10 },
+    { title: "Todo App with Persistence", desc: "Create a task manager with data storage", difficulty: "intermediate", minProgress: 30 },
+    { title: "API-Powered Dashboard", desc: "Connect to a real API and display live data", difficulty: "intermediate", minProgress: 50 },
+    { title: "Full-Stack App", desc: "Build a complete app with frontend and backend", difficulty: "advanced", minProgress: 70 },
+    { title: "Open Source Contribution", desc: "Contribute to a real open source project", difficulty: "advanced", minProgress: 85 },
+  ],
+  design: [
+    { title: "Redesign a Landing Page", desc: "Redesign an existing website landing page", difficulty: "beginner", minProgress: 0 },
+    { title: "Mobile App Mockup", desc: "Design a complete mobile app UI in Figma", difficulty: "beginner", minProgress: 10 },
+    { title: "Design System", desc: "Create a reusable component library", difficulty: "intermediate", minProgress: 30 },
+    { title: "E-Commerce UI Kit", desc: "Design a full e-commerce shopping experience", difficulty: "intermediate", minProgress: 50 },
+    { title: "Brand Identity Project", desc: "Create a complete brand identity package", difficulty: "advanced", minProgress: 70 },
+    { title: "Design Case Study", desc: "Document a full UX research and design process", difficulty: "advanced", minProgress: 85 },
+  ],
+  data: [
+    { title: "Data Cleaning Exercise", desc: "Clean and prepare a messy dataset for analysis", difficulty: "beginner", minProgress: 0 },
+    { title: "Exploratory Data Analysis", desc: "Analyze a dataset and find key insights", difficulty: "beginner", minProgress: 10 },
+    { title: "Interactive Dashboard", desc: "Build an interactive data visualization dashboard", difficulty: "intermediate", minProgress: 30 },
+    { title: "Predictive Model", desc: "Build a machine learning model to make predictions", difficulty: "intermediate", minProgress: 50 },
+    { title: "End-to-End Pipeline", desc: "Build a complete data pipeline from ingestion to visualization", difficulty: "advanced", minProgress: 70 },
+    { title: "Kaggle Competition", desc: "Compete in a real data science competition", difficulty: "advanced", minProgress: 85 },
+  ],
+  marketing: [
+    { title: "Competitor Analysis", desc: "Analyze 3 competitors and identify opportunities", difficulty: "beginner", minProgress: 0 },
+    { title: "Content Calendar", desc: "Create a 30-day content strategy and calendar", difficulty: "beginner", minProgress: 10 },
+    { title: "SEO Audit", desc: "Perform a complete SEO audit of a website", difficulty: "intermediate", minProgress: 30 },
+    { title: "Campaign Strategy", desc: "Plan and document a multi-channel marketing campaign", difficulty: "intermediate", minProgress: 50 },
+    { title: "Analytics Dashboard", desc: "Set up tracking and create a marketing analytics report", difficulty: "advanced", minProgress: 70 },
+    { title: "Growth Case Study", desc: "Document a complete growth strategy with metrics", difficulty: "advanced", minProgress: 85 },
+  ],
+  devops: [
+    { title: "Local Dev Environment", desc: "Set up a containerized development environment", difficulty: "beginner", minProgress: 0 },
+    { title: "CI/CD Pipeline", desc: "Create an automated build and deploy pipeline", difficulty: "beginner", minProgress: 10 },
+    { title: "Infrastructure as Code", desc: "Define and deploy infrastructure using code", difficulty: "intermediate", minProgress: 30 },
+    { title: "Monitoring & Alerting", desc: "Set up monitoring, logging, and alerting", difficulty: "intermediate", minProgress: 50 },
+    { title: "Multi-Environment Setup", desc: "Create dev/staging/production environments", difficulty: "advanced", minProgress: 70 },
+    { title: "Disaster Recovery Plan", desc: "Design and test a disaster recovery strategy", difficulty: "advanced", minProgress: 85 },
+  ],
+  general: [
+    { title: "Learning Journal", desc: "Document your learning progress and key takeaways", difficulty: "beginner", minProgress: 0 },
+    { title: "Skill Assessment", desc: "Create a self-assessment and identify gaps", difficulty: "beginner", minProgress: 10 },
+    { title: "Mini Project", desc: "Apply your knowledge in a focused mini project", difficulty: "intermediate", minProgress: 30 },
+    { title: "Case Study Analysis", desc: "Analyze a real-world case study in your field", difficulty: "intermediate", minProgress: 50 },
+    { title: "Teach Someone", desc: "Create a tutorial or workshop for others", difficulty: "advanced", minProgress: 70 },
+    { title: "Portfolio Project", desc: "Build a comprehensive portfolio piece", difficulty: "advanced", minProgress: 85 },
+  ],
+};
+
+export function getProjectsForSkill(skillName: string): ProjectTemplate[] {
+  const category = getSkillCategory(skillName);
+  return PROJECT_TEMPLATES[category];
 }
