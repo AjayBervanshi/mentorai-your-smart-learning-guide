@@ -32,11 +32,26 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     const loadUserData = async () => {
       setLoading(true);
       try {
-        const { data: lp } = await supabase
-          .from("user_learning_profiles")
-          .select("*")
-          .eq("user_id", userId)
-          .maybeSingle();
+        const [
+          { data: lp },
+          { data: skillRows },
+          { data: topicRows }
+        ] = await Promise.all([
+          supabase
+            .from("user_learning_profiles")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle(),
+          supabase
+            .from("user_skills")
+            .select("*")
+            .eq("user_id", userId),
+          supabase
+            .from("user_topics")
+            .select("*")
+            .eq("user_id", userId)
+            .order("sort_order", { ascending: true })
+        ]);
 
         if (!lp) {
           setProfile(null);
@@ -44,22 +59,11 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           return;
         }
 
-        const { data: skillRows } = await supabase
-          .from("user_skills")
-          .select("*")
-          .eq("user_id", userId);
-
         if (!skillRows || skillRows.length === 0) {
           setProfile(null);
           setLoading(false);
           return;
         }
-
-        const { data: topicRows } = await supabase
-          .from("user_topics")
-          .select("*")
-          .eq("user_id", userId)
-          .order("sort_order", { ascending: true });
 
         const skills: UserSkill[] = skillRows.map((s) => {
           const topics: Topic[] = (topicRows || [])
