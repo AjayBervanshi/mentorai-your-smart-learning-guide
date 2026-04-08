@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket, AlertCircle } from "lucide-react";
+import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SkillLevel, UserGoal, DailyTime } from "@/types/learning";
 import { useLearning } from "@/context/LearningContext";
-import { findMatchingSkills, isValidSkill } from "@/data/skillTemplates";
+import { findMatchingSkills, normalizeSkillName } from "@/data/skillTemplates";
 import { toast } from "sonner";
 
 const steps = ["skills", "level", "goal", "time"] as const;
@@ -32,17 +32,27 @@ export default function Onboarding() {
   };
 
   const addSkill = (name?: string) => {
-    const skillName = (name || currentSkill).trim();
-    if (!skillName) return;
-    if (!isValidSkill(skillName)) {
-      toast.error("Please enter a valid skill name (e.g. Python, React, Marketing)");
+    const rawName = (name || currentSkill).trim();
+    if (!rawName) return;
+
+    // Normalize the skill name (fuzzy match + proper casing)
+    const normalized = normalizeSkillName(rawName);
+    if (!normalized) {
+      toast.error("We don't recognize that skill. Please pick from the suggestions or try a common skill name like Python, React, Marketing, etc.");
       return;
     }
-    if (skills.find((s) => s.name.toLowerCase() === skillName.toLowerCase())) {
+
+    if (skills.find((s) => s.name.toLowerCase() === normalized.toLowerCase())) {
       toast.error("You've already added this skill");
       return;
     }
-    setSkills([...skills, { name: skillName, level: currentLevel }]);
+
+    // Show correction if name was auto-corrected
+    if (rawName.toLowerCase() !== normalized.toLowerCase()) {
+      toast.success(`Added as "${normalized}"`);
+    }
+
+    setSkills([...skills, { name: normalized, level: currentLevel }]);
     setCurrentSkill("");
     setSuggestions([]);
   };
@@ -91,7 +101,7 @@ export default function Onboarding() {
                     <Brain className="w-7 h-7 text-primary-foreground" />
                   </div>
                   <h1 className="text-3xl font-bold text-foreground">What do you want to learn?</h1>
-                  <p className="text-muted-foreground">Add one or more skills. You can always add more later.</p>
+                  <p className="text-muted-foreground">Add one or more skills. We'll auto-correct names for you!</p>
                 </div>
 
                 <div className="relative">
