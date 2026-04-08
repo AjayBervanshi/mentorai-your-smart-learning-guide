@@ -9,6 +9,7 @@ interface LearningContextType {
   loading: boolean;
   completeOnboarding: (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => Promise<void>;
   updateSkillProgress: (skillId: string, topicId: string, score: number) => Promise<void>;
+  addSkill: (name: string, level: SkillLevel) => Promise<void>;
   getActiveSkill: () => UserSkill | null;
   setActiveSkillId: (id: string) => void;
   activeSkillId: string | null;
@@ -21,7 +22,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
   const [activeSkillId, setActiveSkillId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user data from database
   useEffect(() => {
     if (!userId) {
       setProfile(null);
@@ -32,7 +32,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     const loadUserData = async () => {
       setLoading(true);
       try {
-        // Load learning profile
         const { data: lp } = await supabase
           .from("user_learning_profiles")
           .select("*")
@@ -45,7 +44,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           return;
         }
 
-        // Load skills
         const { data: skillRows } = await supabase
           .from("user_skills")
           .select("*")
@@ -57,7 +55,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           return;
         }
 
-        // Load topics for all skills
         const { data: topicRows } = await supabase
           .from("user_topics")
           .select("*")
@@ -117,7 +114,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
       if (!userId) return;
 
       try {
-        // Insert learning profile
         const { error: lpError } = await supabase.from("user_learning_profiles").insert({
           user_id: userId,
           goal,
@@ -128,19 +124,13 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         const userSkills: UserSkill[] = [];
 
         for (const s of skills) {
-          // Insert skill
           const { data: skillData, error: skillError } = await supabase
             .from("user_skills")
-            .insert({
-              user_id: userId,
-              name: s.name,
-              level: s.level,
-            })
+            .insert({ user_id: userId, name: s.name, level: s.level })
             .select()
             .single();
           if (skillError) throw skillError;
 
-          // Generate topics from templates
           const topicTemplates = getTopicsForSkill(s.name, s.level);
           const topicInserts = topicTemplates.map((t, i) => ({
             skill_id: skillData.id,
@@ -196,19 +186,79 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     [userId]
   );
 
+  const addSkill = useCallback(
+    async (name: string, level: SkillLevel) => {
+      if (!userId || !profile) return;
+
+      try {
+        const { data: skillData, error: skillError } = await supabase
+          .from("user_skills")
+          .insert({ user_id: userId, name, level })
+          .select()
+          .single();
+        if (skillError) throw skillError;
+
+        const topicTemplates = getTopicsForSkill(name, level);
+        const topicInserts = topicTemplates.map((t, i) => ({
+          skill_id: skillData.id,
+          user_id: userId,
+          title: t.title,
+          description: t.description,
+          level: t.level,
+          sort_order: i,
+          subtopics: t.subtopics,
+        }));
+
+        const { data: topicData, error: topicError } = await supabase
+          .from("user_topics")
+          .insert(topicInserts)
+          .select();
+        if (topicError) throw topicError;
+
+        const topics: Topic[] = (topicData || []).map((t) => ({
+          id: t.id,
+          title: t.title,
+          description: t.description || "",
+          level: t.level as SkillLevel,
+          completed: false,
+          subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+        }));
+
+        const newSkill: UserSkill = {
+          id: skillData.id,
+          name,
+          level,
+          progress: 0,
+          currentTopicIndex: 0,
+          weakTopics: [],
+          completedTopics: [],
+          topics,
+        };
+
+        setProfile((prev) => {
+          if (!prev) return prev;
+          return { ...prev, skills: [...prev.skills, newSkill] };
+        });
+        setActiveSkillId(skillData.id);
+      } catch (err) {
+        console.error("Failed to add skill:", err);
+        throw err;
+      }
+    },
+    [userId, profile]
+  );
+
   const updateSkillProgress = useCallback(
     async (skillId: string, topicId: string, score: number) => {
       if (!userId) return;
 
       try {
-        // Update topic
         await supabase
           .from("user_topics")
           .update({ completed: score >= 60, score })
           .eq("id", topicId)
           .eq("user_id", userId);
 
-        // Recalculate skill progress
         const { data: allTopics } = await supabase
           .from("user_topics")
           .select("*")
@@ -225,39 +275,71 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             .eq("id", skillId)
             .eq("user_id", userId);
 
-          // Update XP
-          await supabase
-            .from("user_learning_profiles")
-            .update({ total_xp: (profile?.totalXP || 0) + score })
-            .eq("user_id", userId);
-        }
+          // Update XP and streak
+          const today = new Date().toISOString().split("T")[0];
+          const lastActive = profile?.joinedDate ? undefined : undefined; // we need to query
 
-        // Update local state
-        setProfile((prev) => {
-          if (!prev) return prev;
-          const skills = prev.skills.map((skill) => {
-            if (skill.id !== skillId) return skill;
-            const topics = skill.topics.map((t) =>
-              t.id === topicId ? { ...t, completed: score >= 60, score } : t
-            );
-            const completedCount = topics.filter((t) => t.completed).length;
-            const weak = topics.filter((t) => t.score !== undefined && t.score < 60).map((t) => t.id);
-            return {
-              ...skill,
-              topics,
-              progress: Math.round((completedCount / topics.length) * 100),
-              completedTopics: topics.filter((t) => t.completed).map((t) => t.id),
-              weakTopics: weak,
-              currentTopicIndex: Math.min(completedCount, topics.length - 1),
-            };
-          });
-          return { ...prev, skills, totalXP: prev.totalXP + score };
-        });
+          const { data: lpData } = await supabase
+            .from("user_learning_profiles")
+            .select("last_active_date, streak, total_xp")
+            .eq("user_id", userId)
+            .single();
+
+          if (lpData) {
+            let newStreak = lpData.streak || 0;
+            const lastDate = lpData.last_active_date;
+
+            if (lastDate !== today) {
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+              if (lastDate === yesterdayStr) {
+                newStreak += 1;
+              } else if (!lastDate) {
+                newStreak = 1;
+              } else {
+                newStreak = 1; // reset
+              }
+            }
+
+            await supabase
+              .from("user_learning_profiles")
+              .update({
+                total_xp: (lpData.total_xp || 0) + score,
+                streak: newStreak,
+                last_active_date: today,
+              })
+              .eq("user_id", userId);
+
+            // Update local state
+            setProfile((prev) => {
+              if (!prev) return prev;
+              const skills = prev.skills.map((skill) => {
+                if (skill.id !== skillId) return skill;
+                const topics = skill.topics.map((t) =>
+                  t.id === topicId ? { ...t, completed: score >= 60, score } : t
+                );
+                const completedCount = topics.filter((t) => t.completed).length;
+                const weak = topics.filter((t) => t.score !== undefined && t.score < 60).map((t) => t.id);
+                return {
+                  ...skill,
+                  topics,
+                  progress: Math.round((completedCount / topics.length) * 100),
+                  completedTopics: topics.filter((t) => t.completed).map((t) => t.id),
+                  weakTopics: weak,
+                  currentTopicIndex: Math.min(completedCount, topics.length - 1),
+                };
+              });
+              return { ...prev, skills, totalXP: (lpData.total_xp || 0) + score, streak: newStreak };
+            });
+          }
+        }
       } catch (err) {
         console.error("Failed to update progress:", err);
       }
     },
-    [userId, profile?.totalXP]
+    [userId]
   );
 
   const getActiveSkill = useCallback(() => {
@@ -267,7 +349,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
   return (
     <LearningContext.Provider
-      value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, getActiveSkill, setActiveSkillId, activeSkillId }}
+      value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, addSkill, getActiveSkill, setActiveSkillId, activeSkillId }}
     >
       {children}
     </LearningContext.Provider>
