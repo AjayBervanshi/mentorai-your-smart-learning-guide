@@ -28,6 +28,7 @@ export default function AppLayout() {
       <div className="flex justify-end p-3">
         <button
           onClick={signOut}
+          aria-label="Sign out"
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-secondary/50"
         >
           <LogOut className="w-3.5 h-3.5" />
@@ -49,6 +50,8 @@ export default function AppLayout() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              aria-label={tab.label}
+              aria-current={activeTab === tab.id ? 'page' : undefined}
               className="relative flex flex-col items-center gap-1 px-3 py-1"
             >
               {activeTab === tab.id && (
