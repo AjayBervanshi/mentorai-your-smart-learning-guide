@@ -82,7 +82,8 @@ export default function Auth() {
       }
       if (result.redirected) return;
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Google sign-in failed");
+      console.error(err);
+      toast.error(err instanceof Error && err.message ? err.message : "Google sign-in failed");
     } finally {
       setLoading(false);
     }
