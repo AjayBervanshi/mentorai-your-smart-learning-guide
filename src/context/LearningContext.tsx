@@ -62,20 +62,35 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           .order("sort_order", { ascending: true });
 
         const skills: UserSkill[] = skillRows.map((s) => {
-          const topics: Topic[] = (topicRows || [])
-            .filter((t) => t.skill_id === s.id)
-            .map((t) => ({
-              id: t.id,
-              title: t.title,
-              description: t.description || "",
-              level: t.level as SkillLevel,
-              completed: t.completed || false,
-              score: t.score ?? undefined,
-              subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
-            }));
+          // ⚡ Bolt: Optimized topic filtering and mapping to a single pass O(N) loop
+          // instead of chained .filter().map() to avoid redundant iterations.
+          const topics: Topic[] = [];
+          const completedTopics: string[] = [];
+          const weakTopics: string[] = [];
 
-          const completedTopics = topics.filter((t) => t.completed).map((t) => t.id);
-          const weakTopics = topics.filter((t) => t.score !== undefined && t.score < 60).map((t) => t.id);
+          if (topicRows) {
+            for (const t of topicRows) {
+              if (t.skill_id === s.id) {
+                const topic: Topic = {
+                  id: t.id,
+                  title: t.title,
+                  description: t.description || "",
+                  level: t.level as SkillLevel,
+                  completed: t.completed || false,
+                  score: t.score ?? undefined,
+                  subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+                };
+                topics.push(topic);
+
+                if (topic.completed) {
+                  completedTopics.push(topic.id);
+                }
+                if (topic.score !== undefined && topic.score < 60) {
+                  weakTopics.push(topic.id);
+                }
+              }
+            }
+          }
 
           return {
             id: s.id,
@@ -320,14 +335,29 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
                 const topics = skill.topics.map((t) =>
                   t.id === topicId ? { ...t, completed: score >= 60, score } : t
                 );
-                const completedCount = topics.filter((t) => t.completed).length;
-                const weak = topics.filter((t) => t.score !== undefined && t.score < 60).map((t) => t.id);
+
+                // ⚡ Bolt: Optimized local state array processing to O(N) by replacing
+                // chained .filter().map() with a single pass over topics.
+                let completedCount = 0;
+                const completedTopics: string[] = [];
+                const weakTopics: string[] = [];
+
+                for (const t of topics) {
+                  if (t.completed) {
+                    completedCount++;
+                    completedTopics.push(t.id);
+                  }
+                  if (t.score !== undefined && t.score < 60) {
+                    weakTopics.push(t.id);
+                  }
+                }
+
                 return {
                   ...skill,
                   topics,
                   progress: Math.round((completedCount / topics.length) * 100),
-                  completedTopics: topics.filter((t) => t.completed).map((t) => t.id),
-                  weakTopics: weak,
+                  completedTopics,
+                  weakTopics,
                   currentTopicIndex: Math.min(completedCount, topics.length - 1),
                 };
               });
