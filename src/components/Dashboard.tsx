@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2 } from "lucide-react";
+import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2, Trash2 } from "lucide-react";
 import { useLearning } from "@/context/LearningContext";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -14,12 +14,13 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
-  const { profile, setActiveSkillId, addSkill } = useLearning();
+  const { profile, setActiveSkillId, addSkill, removeSkill } = useLearning();
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [newSkill, setNewSkill] = useState("");
   const [newLevel, setNewLevel] = useState<SkillLevel>("beginner");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [addingSkill, setAddingSkill] = useState(false);
+  const [deletingSkillId, setDeletingSkillId] = useState<string | null>(null);
 
   if (!profile) return null;
 
@@ -57,6 +58,22 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       toast.error("Failed to add skill");
     } finally {
       setAddingSkill(false);
+    }
+  };
+
+
+  const handleDeleteSkill = async (e: React.MouseEvent, skillId: string, skillName: string) => {
+    e.stopPropagation(); // prevent navigation
+    if (confirm(`Are you sure you want to remove ${skillName}? This cannot be undone.`)) {
+      setDeletingSkillId(skillId);
+      try {
+        await removeSkill(skillId);
+        toast.success(`Removed ${skillName}`);
+      } catch {
+        toast.error("Failed to remove skill");
+      } finally {
+        setDeletingSkillId(null);
+      }
     }
   };
 
@@ -176,7 +193,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <div className="text-xs text-muted-foreground capitalize">{skill.level}</div>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => handleDeleteSkill(e, skill.id, skill.name)}
+                    disabled={deletingSkillId === skill.id}
+                    className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                    aria-label={`Remove ${skill.name} skill`}
+                  >
+                    {deletingSkillId === skill.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  </button>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
               </div>
               <Progress value={skill.progress} className="h-2 mb-2" />
               <div className="flex justify-between text-xs text-muted-foreground">

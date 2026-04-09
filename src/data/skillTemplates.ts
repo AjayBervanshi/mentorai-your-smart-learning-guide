@@ -167,6 +167,7 @@ function levenshtein(a: string, b: string): number {
  * e.g. "pyhon" → "Python", "devops" → "DevOps", "reactjs" → "React"
  */
 export function normalizeSkillName(input: string): string | null {
+  if (input.length > 50) return null; // Prevent excessive computation
   const trimmed = input.trim();
   if (!trimmed) return null;
   const lower = trimmed.toLowerCase();
@@ -215,6 +216,7 @@ export function normalizeSkillName(input: string): string | null {
 }
 
 export function findMatchingSkills(input: string): string[] {
+  if (input.length > 50) return []; // Prevent excessive computation
   const normalized = input.toLowerCase().trim();
   if (normalized.length < 2) return [];
 

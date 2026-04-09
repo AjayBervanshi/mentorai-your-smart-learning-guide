@@ -10,6 +10,7 @@ interface LearningContextType {
   completeOnboarding: (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => Promise<void>;
   updateSkillProgress: (skillId: string, topicId: string, score: number) => Promise<void>;
   addSkill: (name: string, level: SkillLevel) => Promise<void>;
+  removeSkill: (skillId: string) => Promise<void>;
   getActiveSkill: () => UserSkill | null;
   setActiveSkillId: (id: string) => void;
   activeSkillId: string | null;
@@ -248,6 +249,40 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     [userId, profile]
   );
 
+
+  const removeSkill = useCallback(async (skillId: string) => {
+    if (!userId || !profile) return;
+
+    try {
+      // Supabase cascade deletes should handle topics if set up,
+      // but to be safe we'll just delete the skill.
+      // If we need to explicitly delete topics, we would do it here.
+      const { error: skillError } = await supabase
+        .from("user_skills")
+        .delete()
+        .eq("id", skillId)
+        .eq("user_id", userId);
+
+      if (skillError) throw skillError;
+
+      setProfile(prev => {
+        if (!prev) return prev;
+        const remainingSkills = prev.skills.filter(s => s.id !== skillId);
+        return {
+          ...prev,
+          skills: remainingSkills
+        };
+      });
+
+      if (activeSkillId === skillId) {
+        setActiveSkillId(null);
+      }
+    } catch (err) {
+      console.error("Failed to remove skill:", err);
+      throw err;
+    }
+  }, [userId, profile, activeSkillId]);
+
   const updateSkillProgress = useCallback(
     async (skillId: string, topicId: string, score: number) => {
       if (!userId) return;
@@ -277,7 +312,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
           // Update XP and streak
           const today = new Date().toISOString().split("T")[0];
-          const lastActive = profile?.joinedDate ? undefined : undefined; // we need to query
+          // unused variable removed
 
           const { data: lpData } = await supabase
             .from("user_learning_profiles")
@@ -349,7 +384,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
   return (
     <LearningContext.Provider
-      value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, addSkill, getActiveSkill, setActiveSkillId, activeSkillId }}
+      value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, addSkill, removeSkill, getActiveSkill, setActiveSkillId, activeSkillId }}
     >
       {children}
     </LearningContext.Provider>

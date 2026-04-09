@@ -50,7 +50,7 @@ export default function ResetPassword() {
       setSuccess(true);
       toast.success("Password updated successfully!");
       setTimeout(() => navigate("/"), 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.message || "Failed to update password");
     } finally {
       setLoading(false);
