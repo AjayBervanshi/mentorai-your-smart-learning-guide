@@ -317,18 +317,30 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
               if (!prev) return prev;
               const skills = prev.skills.map((skill) => {
                 if (skill.id !== skillId) return skill;
-                const topics = skill.topics.map((t) =>
-                  t.id === topicId ? { ...t, completed: score >= 60, score } : t
-                );
-                const completedCount = topics.filter((t) => t.completed).length;
-                const weak = topics.filter((t) => t.score !== undefined && t.score < 60).map((t) => t.id);
+                const updatedTopics: Topic[] = [];
+                const completedTopics: string[] = [];
+                const weakTopics: string[] = [];
+                let completedCount = 0;
+
+                for (const t of skill.topics) {
+                  const updatedTopic = t.id === topicId ? { ...t, completed: score >= 60, score } : t;
+                  updatedTopics.push(updatedTopic);
+                  if (updatedTopic.completed) {
+                    completedCount++;
+                    completedTopics.push(updatedTopic.id);
+                  }
+                  if (updatedTopic.score !== undefined && updatedTopic.score < 60) {
+                    weakTopics.push(updatedTopic.id);
+                  }
+                }
+
                 return {
                   ...skill,
-                  topics,
-                  progress: Math.round((completedCount / topics.length) * 100),
-                  completedTopics: topics.filter((t) => t.completed).map((t) => t.id),
-                  weakTopics: weak,
-                  currentTopicIndex: Math.min(completedCount, topics.length - 1),
+                  topics: updatedTopics,
+                  progress: Math.round((completedCount / updatedTopics.length) * 100),
+                  completedTopics,
+                  weakTopics,
+                  currentTopicIndex: Math.min(completedCount, updatedTopics.length - 1),
                 };
               });
               return { ...prev, skills, totalXP: (lpData.total_xp || 0) + score, streak: newStreak };
