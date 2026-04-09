@@ -312,7 +312,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
           // Update XP and streak
           const today = new Date().toISOString().split("T")[0];
-          const lastActive = profile?.joinedDate ? undefined : undefined; // we need to query
+          // unused variable removed
 
           const { data: lpData } = await supabase
             .from("user_learning_profiles")

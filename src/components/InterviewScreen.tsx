@@ -22,11 +22,6 @@ export default function InterviewScreen() {
 
   const skill = profile?.skills.find((s) => s.id === activeSkillId) || profile?.skills[0];
 
-  useEffect(() => {
-    if (!skill) return;
-    loadInterviewQuestions();
-  }, [skill?.name]);
-
   const loadInterviewQuestions = async () => {
     if (!skill) return;
     setLoading(true);
