@@ -67,7 +67,7 @@ export default function LearningScreen() {
       } else if (type === "quiz" && data.quiz) {
         setQuizQuestions(data.quiz);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to load content:", err);
       toast.error("Failed to generate content. Please try again.");
     } finally {
