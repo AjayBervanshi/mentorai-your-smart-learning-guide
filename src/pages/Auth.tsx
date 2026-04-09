@@ -27,7 +27,8 @@ export default function Auth() {
         toast.success("Check your email for the reset link!");
         setMode("login");
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Failed to send reset email");
+        console.error(err);
+        toast.error(err instanceof Error && err.message ? err.message : "Failed to send reset email");
       } finally {
         setLoading(false);
       }
