@@ -64,7 +64,8 @@ export default function Auth() {
         if (error) throw error;
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed");
+      console.error(err);
+      toast.error(err instanceof Error && err.message ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
     }
