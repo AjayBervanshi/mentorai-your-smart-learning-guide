@@ -127,8 +127,7 @@ Return JSON array:
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
+      console.error("AI gateway error:", aiResponse.status); // Sanitized: removed raw response text to prevent leaking sensitive API internals
       throw new Error("AI generation failed");
     }
 
@@ -142,7 +141,7 @@ Return JSON array:
     try {
       parsed = JSON.parse(content);
     } catch {
-      console.error("Failed to parse AI response:", content);
+      console.error("Failed to parse AI response. Content was invalid JSON."); // Sanitized: removed raw AI content from logs
       throw new Error("AI returned invalid JSON");
     }
 
@@ -173,7 +172,8 @@ Return JSON array:
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (e) {
-    console.error("generate-content error:", e);
+    // Sanitized: Check if error is an instance of Error and only log the safe message
+    console.error("generate-content error:", e instanceof Error ? e.message : "Unknown error occurred");
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
