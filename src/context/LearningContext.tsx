@@ -32,34 +32,34 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     const loadUserData = async () => {
       setLoading(true);
       try {
-        const { data: lp } = await supabase
-          .from("user_learning_profiles")
-          .select("*")
-          .eq("user_id", userId)
-          .maybeSingle();
+        // ⚡ Bolt: Optimizing initial user data load by batching independent requests
+        // using Promise.all() to prevent network waterfalls and reduce latency.
+        const [
+          { data: lp },
+          { data: skillRows },
+          { data: topicRows }
+        ] = await Promise.all([
+          supabase
+            .from("user_learning_profiles")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle(),
+          supabase
+            .from("user_skills")
+            .select("*")
+            .eq("user_id", userId),
+          supabase
+            .from("user_topics")
+            .select("*")
+            .eq("user_id", userId)
+            .order("sort_order", { ascending: true })
+        ]);
 
-        if (!lp) {
+        if (!lp || !skillRows || skillRows.length === 0) {
           setProfile(null);
           setLoading(false);
           return;
         }
-
-        const { data: skillRows } = await supabase
-          .from("user_skills")
-          .select("*")
-          .eq("user_id", userId);
-
-        if (!skillRows || skillRows.length === 0) {
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-
-        const { data: topicRows } = await supabase
-          .from("user_topics")
-          .select("*")
-          .eq("user_id", userId)
-          .order("sort_order", { ascending: true });
 
         const skills: UserSkill[] = skillRows.map((s) => {
           // ⚡ Bolt: Optimized topic filtering and mapping to a single pass O(N) loop
