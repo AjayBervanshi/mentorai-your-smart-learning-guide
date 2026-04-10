@@ -1,0 +1,3 @@
+## 2024-04-10 - [Initial Data Fetch Waterfall]
+**Learning:** Supabase queries for related data models (like `user_learning_profiles`, `user_skills`, and `user_topics`) often trigger network waterfalls if awaited sequentially in React context providers. This is a specific architecture pattern we need to watch out for since the frontend is heavily reliant on Supabase initial data loads.
+**Action:** When fetching initial application state that is conceptually dependent but structurally independent in the database, always batch the Supabase API calls with `Promise.all()` to drastically reduce time-to-interactive.
