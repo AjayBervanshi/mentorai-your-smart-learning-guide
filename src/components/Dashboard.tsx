@@ -101,7 +101,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="glass-card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">Add a new skill</span>
-                <button onClick={() => setShowAddSkill(false)} className="text-muted-foreground hover:text-foreground">
+                <button aria-label="Close add skill form" onClick={() => setShowAddSkill(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -121,7 +121,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     onKeyDown={(e) => e.key === "Enter" && handleAddSkill()}
                     className="bg-secondary border-border"
                   />
-                  <Button onClick={() => handleAddSkill()} disabled={addingSkill} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
+                  <Button aria-label="Add skill" onClick={() => handleAddSkill()} disabled={addingSkill} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
                     {addingSkill ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-5 h-5" />}
                   </Button>
                 </div>
