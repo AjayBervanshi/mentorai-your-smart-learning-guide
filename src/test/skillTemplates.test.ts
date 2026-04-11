@@ -29,9 +29,9 @@ describe("findMatchingSkills", () => {
     expect(results).toContain("Python");
   });
 
-  it("limits results to 5", () => {
+  it("limits results to 8", () => {
     const results = findMatchingSkills("data");
-    expect(results.length).toBeLessThanOrEqual(5);
+    expect(results.length).toBeLessThanOrEqual(8);
   });
 
   it("returns empty array when no matches are found", () => {
@@ -66,10 +66,15 @@ describe("normalizeSkillName", () => {
     expect(normalizeSkillName("javascritp")).toBe("JavaScript");
   });
 
-  it("returns null for unknown skills", () => {
-    expect(normalizeSkillName("unknown_skill_xyz")).toBeNull();
+  it("returns null for empty/single-char input", () => {
     expect(normalizeSkillName("")).toBeNull();
     expect(normalizeSkillName("   ")).toBeNull();
+    expect(normalizeSkillName("x")).toBeNull();
+  });
+
+  it("accepts unknown skills with title-casing", () => {
+    expect(normalizeSkillName("underwater basket weaving")).toBe("Underwater Basket Weaving");
+    expect(normalizeSkillName("quantum computing")).toBe("Quantum Computing");
   });
 });
 
@@ -80,9 +85,14 @@ describe("isValidSkill", () => {
     expect(isValidSkill("pyhon")).toBe(true);
   });
 
-  it("returns false for invalid skill names", () => {
-    expect(isValidSkill("unknown_skill_xyz")).toBe(false);
+  it("returns true for any non-trivial input (accepts all skills)", () => {
+    expect(isValidSkill("cooking")).toBe(true);
+    expect(isValidSkill("quantum physics")).toBe(true);
+  });
+
+  it("returns false for empty or single-char input", () => {
     expect(isValidSkill("")).toBe(false);
+    expect(isValidSkill("x")).toBe(false);
   });
 });
 
@@ -92,6 +102,12 @@ describe("getSkillCategory", () => {
     expect(getSkillCategory("sql")).toBe("data");
     expect(getSkillCategory("UI Design")).toBe("design");
     expect(getSkillCategory("Docker")).toBe("devops");
+    expect(getSkillCategory("Cooking")).toBe("lifestyle");
+    expect(getSkillCategory("Photography")).toBe("creative");
+    expect(getSkillCategory("Spanish")).toBe("language");
+    expect(getSkillCategory("Physics")).toBe("science");
+    expect(getSkillCategory("LLM")).toBe("data");
+    expect(getSkillCategory("Public Speaking")).toBe("business");
   });
 
   it("returns 'general' for unknown skills", () => {

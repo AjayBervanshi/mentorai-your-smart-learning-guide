@@ -100,9 +100,9 @@ export default function Auth() {
           <h1 className="text-3xl font-bold text-foreground">MentorAI</h1>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto">
             {mode === "login"
-              ? "Welcome back! Sign in to continue your learning journey."
+              ? "Welcome back! Sign in to continue learning anything — coding, cooking, languages, and more."
               : mode === "signup"
-              ? "Create your account and start learning today."
+              ? "Join MentorAI and start learning anything — from AI to cooking, free and personalized."
               : "No worries — we'll help you reset your password."}
           </p>
         </div>

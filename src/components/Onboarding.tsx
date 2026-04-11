@@ -43,10 +43,7 @@ export default function Onboarding() {
     if (!rawName) return;
 
     const normalized = normalizeSkillName(rawName);
-    if (!normalized) {
-      toast.error("We don't recognize that skill. Try something like Python, React, Marketing, etc.");
-      return;
-    }
+    if (!normalized) return;
 
     if (skills.find((s) => s.name.toLowerCase() === normalized.toLowerCase())) {
       toast.error("You've already added this skill");
@@ -116,7 +113,7 @@ export default function Onboarding() {
                     <Brain className="w-7 h-7 text-primary-foreground" />
                   </div>
                   <h1 className="text-3xl font-bold text-foreground">What do you want to learn?</h1>
-                  <p className="text-muted-foreground">Add one or more skills — we support 60+ topics from coding to design to marketing.</p>
+                  <p className="text-muted-foreground">Anything — coding, cooking, languages, music, AI, fitness, business, or anything else. Type any skill!</p>
                 </div>
 
                 <div className="relative">

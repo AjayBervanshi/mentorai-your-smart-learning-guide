@@ -45,10 +45,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     if (!rawName) return;
 
     const normalized = normalizeSkillName(rawName);
-    if (!normalized) {
-      toast.error("We don't recognize that skill. Try a common skill name.");
-      return;
-    }
+    if (!normalized) return;
 
     if (profile.skills.find((s) => s.name.toLowerCase() === normalized.toLowerCase())) {
       toast.error("You've already added this skill");
@@ -173,7 +170,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div className="relative">
                 <div className="flex gap-2">
                   <Input
-                    placeholder="e.g. Python, Docker, React..."
+                    placeholder="e.g. Cooking, Python, LLM, Spanish..."
                     value={newSkill}
                     onChange={(e) => {
                       setNewSkill(e.target.value);

@@ -27,7 +27,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-40 glass-card border-b border-border/50 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
+        <div className="flex items-center justify-between px-4 py-3 max-w-2xl mx-auto">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
               <Brain className="w-4.5 h-4.5 text-primary-foreground" />
@@ -62,7 +62,7 @@ export default function AppLayout() {
       </main>
 
       <nav className="fixed bottom-0 inset-x-0 glass-card border-t border-border/50 backdrop-blur-xl z-50 safe-area-bottom">
-        <div className="flex justify-around items-center h-16 max-w-lg mx-auto px-2">
+        <div className="flex justify-around items-center h-16 max-w-2xl mx-auto px-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
