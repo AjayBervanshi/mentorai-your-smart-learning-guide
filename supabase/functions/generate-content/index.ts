@@ -127,8 +127,7 @@ Return JSON array:
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
+      console.error("AI gateway error:", aiResponse.status);
       throw new Error("AI generation failed");
     }
 
@@ -142,7 +141,7 @@ Return JSON array:
     try {
       parsed = JSON.parse(content);
     } catch {
-      console.error("Failed to parse AI response:", content);
+      console.error("Failed to parse AI response: content was invalid JSON");
       throw new Error("AI returned invalid JSON");
     }
 
@@ -173,7 +172,7 @@ Return JSON array:
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (e) {
-    console.error("generate-content error:", e);
+    console.error("generate-content error:", e instanceof Error ? e.message : "Unknown error");
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

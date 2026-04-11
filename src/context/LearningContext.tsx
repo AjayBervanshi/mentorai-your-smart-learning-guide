@@ -10,6 +10,7 @@ interface LearningContextType {
   completeOnboarding: (skills: { name: string; level: SkillLevel }[], goal: UserGoal, dailyTime: DailyTime) => Promise<void>;
   updateSkillProgress: (skillId: string, topicId: string, score: number) => Promise<void>;
   addSkill: (name: string, level: SkillLevel) => Promise<void>;
+  removeSkill: (skillId: string) => Promise<void>;
   getActiveSkill: () => UserSkill | null;
   setActiveSkillId: (id: string) => void;
   activeSkillId: string | null;
@@ -32,34 +33,32 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     const loadUserData = async () => {
       setLoading(true);
       try {
-        const { data: lp } = await supabase
-          .from("user_learning_profiles")
-          .select("*")
-          .eq("user_id", userId)
-          .maybeSingle();
+        const [
+          { data: lp },
+          { data: skillRows },
+          { data: topicRows }
+        ] = await Promise.all([
+          supabase
+            .from("user_learning_profiles")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle(),
+          supabase
+            .from("user_skills")
+            .select("*")
+            .eq("user_id", userId),
+          supabase
+            .from("user_topics")
+            .select("*")
+            .eq("user_id", userId)
+            .order("sort_order", { ascending: true })
+        ]);
 
-        if (!lp) {
+        if (!lp || !skillRows || skillRows.length === 0) {
           setProfile(null);
           setLoading(false);
           return;
         }
-
-        const { data: skillRows } = await supabase
-          .from("user_skills")
-          .select("*")
-          .eq("user_id", userId);
-
-        if (!skillRows || skillRows.length === 0) {
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-
-        const { data: topicRows } = await supabase
-          .from("user_topics")
-          .select("*")
-          .eq("user_id", userId)
-          .order("sort_order", { ascending: true });
 
         const skills: UserSkill[] = skillRows.map((s) => {
           // ⚡ Bolt: Optimized topic filtering and mapping to a single pass O(N) loop
@@ -263,6 +262,41 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     [userId, profile]
   );
 
+  const removeSkill = useCallback(
+    async (skillId: string) => {
+      if (!userId || !profile) return;
+
+      try {
+        await supabase
+          .from("user_topics")
+          .delete()
+          .eq("skill_id", skillId)
+          .eq("user_id", userId);
+
+        await supabase
+          .from("user_skills")
+          .delete()
+          .eq("id", skillId)
+          .eq("user_id", userId);
+
+        setProfile((prev) => {
+          if (!prev) return prev;
+          const skills = prev.skills.filter((s) => s.id !== skillId);
+          return { ...prev, skills };
+        });
+
+        if (activeSkillId === skillId) {
+          const remaining = profile.skills.filter((s) => s.id !== skillId);
+          setActiveSkillId(remaining[0]?.id ?? null);
+        }
+      } catch (err) {
+        console.error("Failed to remove skill:", err);
+        throw err;
+      }
+    },
+    [userId, profile, activeSkillId]
+  );
+
   const updateSkillProgress = useCallback(
     async (skillId: string, topicId: string, score: number) => {
       if (!userId) return;
@@ -379,7 +413,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
   return (
     <LearningContext.Provider
-      value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, addSkill, getActiveSkill, setActiveSkillId, activeSkillId }}
+      value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, addSkill, removeSkill, getActiveSkill, setActiveSkillId, activeSkillId }}
     >
       {children}
     </LearningContext.Provider>
