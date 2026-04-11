@@ -146,20 +146,40 @@ export const KNOWN_SKILL_CATEGORIES = [
   "Cloud DevOps", "Terraform", "Ansible",
 ];
 
-// Levenshtein distance for fuzzy matching
+const SKILL_NAME_CLEAN_REGEX = /[.\s/-]/g;
+
+// Pre-compute normalized versions of known skills once
+const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
+  const lower = skill.toLowerCase();
+  return {
+    original: skill,
+    lower,
+    clean: lower.replace(SKILL_NAME_CLEAN_REGEX, "")
+  };
+});
+
+// Levenshtein distance for fuzzy matching using two-row space-optimized approach
 function levenshtein(a: string, b: string): number {
+  if (a.length < b.length) [a, b] = [b, a];
   const m = a.length, n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  if (n === 0) return m;
+
+  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
+  let currRow = new Array(n + 1);
+
   for (let i = 1; i <= m; i++) {
+    currRow[0] = i;
     for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      currRow[j] = Math.min(
+        currRow[j - 1] + 1,
+        prevRow[j] + 1,
+        prevRow[j - 1] + cost
+      );
     }
+    [prevRow, currRow] = [currRow, prevRow];
   }
-  return dp[m][n];
+  return prevRow[n];
 }
 
 /**
@@ -170,37 +190,35 @@ export function normalizeSkillName(input: string): string | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
   const lower = trimmed.toLowerCase();
+  const clean = lower.replace(SKILL_NAME_CLEAN_REGEX, "");
 
   // Check aliases first (exact match)
   if (lower in SKILL_ALIASES) {
     const aliasKey = SKILL_ALIASES[lower];
-    // Find the proper display name from KNOWN_SKILL_CATEGORIES
-    const match = KNOWN_SKILL_CATEGORIES.find(
-      (s) => s.toLowerCase() === aliasKey || s.toLowerCase().replace(/[.\s/-]/g, "") === aliasKey.replace(/[.\s/-]/g, "")
+    const aliasKeyClean = aliasKey.replace(SKILL_NAME_CLEAN_REGEX, "");
+    // Find the proper display name from pre-computed categories
+    const match = PREPARED_SKILL_CATEGORIES.find(
+      (s) => s.lower === aliasKey || s.clean === aliasKeyClean
     );
-    return match || aliasKey.charAt(0).toUpperCase() + aliasKey.slice(1);
+    return match ? match.original : aliasKey.charAt(0).toUpperCase() + aliasKey.slice(1);
   }
 
   // Exact match in known skills
-  const exact = KNOWN_SKILL_CATEGORIES.find((s) => s.toLowerCase() === lower);
-  if (exact) return exact;
+  const exact = PREPARED_SKILL_CATEGORIES.find((s) => s.lower === lower);
+  if (exact) return exact.original;
 
   // Fuzzy match: try Levenshtein distance ≤ 2 against known skills
   let bestMatch: string | null = null;
   let bestDist = Infinity;
 
-  for (const skill of KNOWN_SKILL_CATEGORIES) {
-    const skillLower = skill.toLowerCase();
-    const dist = levenshtein(lower, skillLower);
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    const dist = levenshtein(lower, skillObj.lower);
     // Also try without special chars
-    const distClean = levenshtein(
-      lower.replace(/[.\s/-]/g, ""),
-      skillLower.replace(/[.\s/-]/g, "")
-    );
+    const distClean = levenshtein(clean, skillObj.clean);
     const minDist = Math.min(dist, distClean);
     if (minDist < bestDist) {
       bestDist = minDist;
-      bestMatch = skill;
+      bestMatch = skillObj.original;
     }
   }
 
@@ -217,23 +235,24 @@ export function normalizeSkillName(input: string): string | null {
 export function findMatchingSkills(input: string): string[] {
   const normalized = input.toLowerCase().trim();
   if (normalized.length < 2) return [];
+  const clean = normalized.replace(SKILL_NAME_CLEAN_REGEX, "");
 
   // Exact substring matches first
-  const substringMatches = KNOWN_SKILL_CATEGORIES.filter(
-    (skill) =>
-      skill.toLowerCase().includes(normalized) ||
-      normalized.includes(skill.toLowerCase())
+  const substringMatches = PREPARED_SKILL_CATEGORIES.filter(
+    (skillObj) =>
+      skillObj.lower.includes(normalized) ||
+      normalized.includes(skillObj.lower)
   );
 
-  if (substringMatches.length > 0) return substringMatches.slice(0, 5);
+  if (substringMatches.length > 0) return substringMatches.slice(0, 5).map(s => s.original);
 
   // Fuzzy matches
-  const fuzzy = KNOWN_SKILL_CATEGORIES
-    .map((skill) => ({
-      skill,
+  const fuzzy = PREPARED_SKILL_CATEGORIES
+    .map((skillObj) => ({
+      skill: skillObj.original,
       dist: Math.min(
-        levenshtein(normalized, skill.toLowerCase()),
-        levenshtein(normalized.replace(/[.\s/-]/g, ""), skill.toLowerCase().replace(/[.\s/-]/g, ""))
+        levenshtein(normalized, skillObj.lower),
+        levenshtein(clean, skillObj.clean)
       ),
     }))
     .filter((x) => x.dist <= 3)

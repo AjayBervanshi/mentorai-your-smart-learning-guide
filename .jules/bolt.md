@@ -1,0 +1,3 @@
+## 2025-03-24 - [Optimizing Frequent Loops and Fuzzy Matching]
+**Learning:** Inefficient loops that perform redundant string transformations (e.g., `.toLowerCase()`) and regex operations on the same static dataset during each function call create unnecessary CPU and memory overhead. Additionally, standard dynamic programming implementations of algorithms like Levenshtein distance can be space-intensive (O(m*n)).
+**Action:** Pre-computed normalized versions of the dataset (`PREPARED_SKILL_CATEGORIES`) once at the module level and refactored the `levenshtein` algorithm to use a space-optimized two-row iterative approach (O(min(m,n))).
