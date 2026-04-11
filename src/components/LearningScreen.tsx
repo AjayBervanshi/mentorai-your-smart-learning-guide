@@ -5,6 +5,7 @@ import {
   ArrowLeft, MapPin, Lock, Star, Loader2, BookOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { useLearning } from "@/context/LearningContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { QuizQuestion } from "@/types/learning";
@@ -42,8 +43,10 @@ export default function LearningScreen() {
 
   if (!skill || !profile) {
     return (
-      <div className="p-4 max-w-lg mx-auto pt-12 text-center">
-        <p className="text-muted-foreground">Select a skill from the dashboard to start learning.</p>
+      <div className="p-4 max-w-lg mx-auto pt-12 text-center space-y-3">
+        <BookOpen className="w-10 h-10 text-muted-foreground mx-auto" />
+        <p className="text-foreground font-medium">No skill selected</p>
+        <p className="text-muted-foreground text-sm">Go to the Home tab and select a skill to start learning.</p>
       </div>
     );
   }
@@ -131,11 +134,17 @@ export default function LearningScreen() {
   if (mode === "roadmap") {
     return (
       <div className="p-4 max-w-lg mx-auto space-y-6 pt-4">
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl font-bold text-foreground">{skill.name} Roadmap</h1>
-          <p className="text-sm text-muted-foreground">
-            {skill.progress}% complete • {skill.completedTopics.length}/{skill.topics.length} topics
-          </p>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{skill.name} Roadmap</h1>
+            <p className="text-sm text-muted-foreground">
+              {skill.completedTopics.length}/{skill.topics.length} topics completed
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Progress value={skill.progress} className="h-2 flex-1" />
+            <span className="text-sm font-bold text-primary">{skill.progress}%</span>
+          </div>
         </motion.div>
 
         <div className="space-y-2">

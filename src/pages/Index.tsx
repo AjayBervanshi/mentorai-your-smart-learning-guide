@@ -3,19 +3,24 @@ import { useAuth } from "@/hooks/useAuth";
 import Onboarding from "@/components/Onboarding";
 import AppLayout from "@/components/AppLayout";
 import { Navigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Brain } from "lucide-react";
+
+function BrandedLoader() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center glow-primary">
+        <Brain className="w-7 h-7 text-primary-foreground" />
+      </div>
+      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">Loading your learning space...</p>
+    </div>
+  );
+}
 
 function IndexContent() {
   const { isOnboarded, loading } = useLearning();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
+  if (loading) return <BrandedLoader />;
   return isOnboarded ? <AppLayout /> : <Onboarding />;
 }
 
@@ -24,8 +29,8 @@ export default function Index() {
 
   if (!isReady) {
     return (
-      <div className="dark min-h-screen bg-background text-foreground flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="dark min-h-screen bg-background text-foreground">
+        <BrandedLoader />
       </div>
     );
   }
