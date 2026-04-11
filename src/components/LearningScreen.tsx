@@ -67,8 +67,7 @@ export default function LearningScreen() {
       } else if (type === "quiz" && data.quiz) {
         setQuizQuestions(data.quiz);
       }
-    } catch (err: any) {
-      console.error("Failed to load content:", err);
+    } catch (err: unknown) {
       toast.error("Failed to generate content. Please try again.");
     } finally {
       setLoadingContent(false);
@@ -219,7 +218,7 @@ export default function LearningScreen() {
     return (
       <div className="p-4 max-w-lg mx-auto space-y-6 pt-4">
         <div className="flex items-center gap-3">
-          <button onClick={backToRoadmap} className="text-muted-foreground hover:text-foreground">
+          <button aria-label="Go back" onClick={backToRoadmap} className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">

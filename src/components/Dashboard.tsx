@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2 } from "lucide-react";
+import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2, Trash2 } from "lucide-react";
 import { useLearning } from "@/context/LearningContext";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
-  const { profile, setActiveSkillId, addSkill } = useLearning();
+  const { profile, setActiveSkillId, addSkill, removeSkill } = useLearning();
   const [showAddSkill, setShowAddSkill] = useState(false);
   const [newSkill, setNewSkill] = useState("");
   const [newLevel, setNewLevel] = useState<SkillLevel>("beginner");
@@ -101,7 +101,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="glass-card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">Add a new skill</span>
-                <button onClick={() => setShowAddSkill(false)} className="text-muted-foreground hover:text-foreground">
+                <button aria-label="Close add skill form" onClick={() => setShowAddSkill(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -121,7 +121,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     onKeyDown={(e) => e.key === "Enter" && handleAddSkill()}
                     className="bg-secondary border-border"
                   />
-                  <Button onClick={() => handleAddSkill()} disabled={addingSkill} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
+                  <Button aria-label="Add skill" onClick={() => handleAddSkill()} disabled={addingSkill} size="icon" className="gradient-primary shrink-0 text-primary-foreground">
                     {addingSkill ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-5 h-5" />}
                   </Button>
                 </div>
@@ -176,7 +176,19 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <div className="text-xs text-muted-foreground capitalize">{skill.level}</div>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div className="flex items-center gap-1">
+                  <button
+                    aria-label="Delete skill"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeSkill(skill.id).then(() => toast.success(`${skill.name} removed`)).catch(() => toast.error("Failed to remove skill"));
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
               </div>
               <Progress value={skill.progress} className="h-2 mb-2" />
               <div className="flex justify-between text-xs text-muted-foreground">
