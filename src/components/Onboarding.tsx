@@ -119,6 +119,7 @@ export default function Onboarding() {
                 <div className="relative">
                   <div className="flex gap-2">
                     <Input
+                      aria-label="Type a skill name"
                       placeholder="Type a skill name..."
                       value={currentSkill}
                       onChange={(e) => handleSkillInput(e.target.value)}
