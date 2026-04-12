@@ -23,14 +23,27 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   if (!profile) return null;
 
+  // ⚡ Bolt: Consolidated 4 sequential array passes (3 reduce, 1 find) into a single pass
+  let totalProgressSum = 0;
+  let totalTopics = 0;
+  let completedTopics = 0;
+  let currentSkill = profile.skills[0];
+  let foundCurrentSkill = false;
+
+  for (const s of profile.skills) {
+    totalProgressSum += s.progress;
+    totalTopics += s.topics.length;
+    completedTopics += s.completedTopics.length;
+    if (!foundCurrentSkill && s.progress < 100) {
+      currentSkill = s;
+      foundCurrentSkill = true;
+    }
+  }
+
   const totalProgress = profile.skills.length
-    ? Math.round(profile.skills.reduce((acc, s) => acc + s.progress, 0) / profile.skills.length)
+    ? Math.round(totalProgressSum / profile.skills.length)
     : 0;
 
-  const totalTopics = profile.skills.reduce((a, s) => a + s.topics.length, 0);
-  const completedTopics = profile.skills.reduce((a, s) => a + s.completedTopics.length, 0);
-
-  const currentSkill = profile.skills.find(s => s.progress < 100) || profile.skills[0];
   const currentTopic = currentSkill?.topics[currentSkill.currentTopicIndex];
 
   const getGreeting = () => {
