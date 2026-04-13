@@ -1,3 +1,3 @@
-## 2024-04-12 - Consolidate Multiple Array Passes
-**Learning:** React components (e.g., Dashboard, ProgressScreen) often compute multiple aggregate values from state arrays using chained or sequential `.reduce()`, `.find()`, and `.filter()` operations on the same data. This creates redundant O(N) passes over the same array and unnecessary overhead.
-**Action:** When deriving multiple state computations from an array (like total topics, completed topics, total progress, and finding active items), consolidate them into a single pass loop (e.g., `for...of`) to calculate all required metrics simultaneously. This is especially true for data stored in context that is used frequently.
+## 2024-05-18 - [Optimizing chained array passes]
+**Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
+**Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.

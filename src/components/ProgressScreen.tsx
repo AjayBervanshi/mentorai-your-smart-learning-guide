@@ -7,13 +7,16 @@ export default function ProgressScreen() {
   const { profile } = useLearning();
   if (!profile) return null;
 
-  // ⚡ Bolt: Consolidated 2 sequential array passes (reduce) into a single pass
+  // ⚡ Bolt: Optimized array processing to O(N) by combining multiple
+  // .reduce() passes into a single pass over the skills array.
   let totalTopics = 0;
   let completedTopics = 0;
-  for (const s of profile.skills) {
-    totalTopics += s.topics.length;
-    completedTopics += s.completedTopics.length;
+
+  for (const skill of profile.skills) {
+    totalTopics += skill.topics.length;
+    completedTopics += skill.completedTopics.length;
   }
+
   const overallProgress = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
   const milestones = [

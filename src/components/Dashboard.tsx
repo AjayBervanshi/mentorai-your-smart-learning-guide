@@ -23,21 +23,24 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   if (!profile) return null;
 
-  // ⚡ Bolt: Consolidated 4 sequential array passes (3 reduce, 1 find) into a single pass
+  // ⚡ Bolt: Optimized local state array processing to O(N) by replacing
+  // multiple .reduce() and .find() calls with a single pass.
   let totalProgressSum = 0;
   let totalTopics = 0;
   let completedTopics = 0;
-  let currentSkill = profile.skills[0];
-  let foundCurrentSkill = false;
+  let currentSkill: typeof profile.skills[0] | undefined = undefined;
 
-  for (const s of profile.skills) {
-    totalProgressSum += s.progress;
-    totalTopics += s.topics.length;
-    completedTopics += s.completedTopics.length;
-    if (!foundCurrentSkill && s.progress < 100) {
-      currentSkill = s;
-      foundCurrentSkill = true;
+  for (const skill of profile.skills) {
+    totalProgressSum += skill.progress;
+    totalTopics += skill.topics.length;
+    completedTopics += skill.completedTopics.length;
+    if (!currentSkill && skill.progress < 100) {
+      currentSkill = skill;
     }
+  }
+
+  if (!currentSkill && profile.skills.length > 0) {
+    currentSkill = profile.skills[0];
   }
 
   const totalProgress = profile.skills.length
@@ -183,6 +186,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div className="relative">
                 <div className="flex gap-2">
                   <Input
+                    aria-label="New skill name"
                     placeholder="e.g. Cooking, Python, LLM, Spanish..."
                     value={newSkill}
                     onChange={(e) => {
