@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket, Check } from "lucide-react";
+import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SkillLevel, UserGoal, DailyTime } from "@/types/learning";
