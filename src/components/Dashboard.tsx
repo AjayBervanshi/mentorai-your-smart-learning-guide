@@ -170,6 +170,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div className="relative">
                 <div className="flex gap-2">
                   <Input
+                    aria-label="New skill name"
                     placeholder="e.g. Cooking, Python, LLM, Spanish..."
                     value={newSkill}
                     onChange={(e) => {
