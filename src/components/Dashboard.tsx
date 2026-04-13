@@ -23,14 +23,30 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   if (!profile) return null;
 
+  // ⚡ Bolt: Optimized local state array processing to O(N) by replacing
+  // multiple .reduce() and .find() calls with a single pass.
+  let totalProgressSum = 0;
+  let totalTopics = 0;
+  let completedTopics = 0;
+  let currentSkill: typeof profile.skills[0] | undefined = undefined;
+
+  for (const skill of profile.skills) {
+    totalProgressSum += skill.progress;
+    totalTopics += skill.topics.length;
+    completedTopics += skill.completedTopics.length;
+    if (!currentSkill && skill.progress < 100) {
+      currentSkill = skill;
+    }
+  }
+
+  if (!currentSkill && profile.skills.length > 0) {
+    currentSkill = profile.skills[0];
+  }
+
   const totalProgress = profile.skills.length
-    ? Math.round(profile.skills.reduce((acc, s) => acc + s.progress, 0) / profile.skills.length)
+    ? Math.round(totalProgressSum / profile.skills.length)
     : 0;
 
-  const totalTopics = profile.skills.reduce((a, s) => a + s.topics.length, 0);
-  const completedTopics = profile.skills.reduce((a, s) => a + s.completedTopics.length, 0);
-
-  const currentSkill = profile.skills.find(s => s.progress < 100) || profile.skills[0];
   const currentTopic = currentSkill?.topics[currentSkill.currentTopicIndex];
 
   const getGreeting = () => {
@@ -170,7 +186,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div className="relative">
                 <div className="flex gap-2">
                   <Input
-                    aria-label="Add a new skill"
+                    aria-label="New skill name"
                     placeholder="e.g. Cooking, Python, LLM, Spanish..."
                     value={newSkill}
                     onChange={(e) => {

@@ -1,3 +1,3 @@
-## 2024-05-24 - Accessible Names for Inputs Without Visual Labels
-**Learning:** In complex inline forms or quick-add UI patterns (like the "Add Skill" inputs in Dashboard and Onboarding), visual context often replaces explicit `<label>` elements. However, these dynamically styled inputs become inaccessible to screen readers without an accessible name.
-**Action:** Always ensure an `aria-label` is provided for `<Input>` components or any form control when a `<label>` element is omitted or not visually necessary for sighted users, as `placeholder` text is insufficient for accessibility.
+## 2024-10-24 - Missing ARIA labels on inline inputs
+**Learning:** Inline forms or quick-add UI patterns without explicit <label> elements are inaccessible to screen readers because placeholder text is insufficient.
+**Action:** Always provide an aria-label for <Input> components when no explicit label is present.

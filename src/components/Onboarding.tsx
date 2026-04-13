@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket, Check } from "lucide-react";
+import { Brain, Target, Clock, Sparkles, Plus, X, ChevronRight, Briefcase, TrendingUp, Rocket, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { SkillLevel, UserGoal, DailyTime } from "@/types/learning";
@@ -119,7 +119,7 @@ export default function Onboarding() {
                 <div className="relative">
                   <div className="flex gap-2">
                     <Input
-                      aria-label="Type a skill name"
+                      aria-label="Skill name"
                       placeholder="Type a skill name..."
                       value={currentSkill}
                       onChange={(e) => handleSkillInput(e.target.value)}
