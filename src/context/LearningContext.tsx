@@ -4,6 +4,7 @@ import { getTopicsForSkill } from "@/data/skillTemplates";
 import type { UserProfile, UserSkill, SkillLevel, UserGoal, DailyTime, Topic } from "@/types/learning";
 
 interface LearningContextType {
+  appState: AppState;
   profile: UserProfile | null;
   isOnboarded: boolean;
   loading: boolean;
@@ -14,6 +15,8 @@ interface LearningContextType {
   getActiveSkill: () => UserSkill | null;
   setActiveSkillId: (id: string) => void;
   activeSkillId: string | null;
+  switchUser: (userId: string | null) => void;
+  deleteUser: (userId: string) => void;
 }
 
 const LearningContext = createContext<LearningContextType | null>(null);
@@ -410,6 +413,20 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     if (!profile || !activeSkillId) return null;
     return profile.skills.find((s) => s.id === activeSkillId) ?? null;
   }, [profile, activeSkillId]);
+
+  const switchUser = useCallback((userId: string | null) => {
+    setAppState(prev => ({ ...prev, activeUserId: userId }));
+    if (userId) {
+      updateProfile(p => ({ ...p, lastActive: new Date().toISOString() }));
+    }
+  }, [updateProfile]);
+
+  const deleteUser = useCallback((userId: string) => {
+    setAppState(prev => ({
+      users: prev.users.filter(u => u.id !== userId),
+      activeUserId: prev.activeUserId === userId ? null : prev.activeUserId
+    }));
+  }, []);
 
   return (
     <LearningContext.Provider

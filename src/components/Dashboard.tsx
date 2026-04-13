@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 interface DashboardProps {
   onNavigate: (tab: string) => void;
+  onSwitchUser?: () => void;
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {

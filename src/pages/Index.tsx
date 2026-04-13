@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLearning, LearningProvider } from "@/context/LearningContext";
 import { useAuth } from "@/hooks/useAuth";
 import Onboarding from "@/components/Onboarding";
