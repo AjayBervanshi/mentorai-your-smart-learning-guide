@@ -1,3 +1,3 @@
-## 2024-05-18 - [LearningContext Optimization]
-**Learning:** Relational array results from Supabase queries were previously filtered inside a map loop (`skillsRows.map` calling `topicRows.filter`), creating an O(N²) operation across the entire dataset. This is a critical pattern when loading hierarchical relational data.
-**Action:** When loading related records in bulk (e.g., fetching rows for multiple parents), aggregate them using a hash map lookup (`O(N)`) before mapping the parent arrays to prevent O(N²) bottlenecks as the app scales with more users and data.
+## 2024-05-18 - [Optimizing chained array passes]
+**Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
+**Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
