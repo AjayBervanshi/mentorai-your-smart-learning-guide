@@ -58,8 +58,8 @@ describe("findMatchingSkills", () => {
   });
 
   it("limits results to 5", () => {
-    const results = findMatchingSkills("da");
-    expect(results.length).toBeLessThanOrEqual(5);
+    const results = findMatchingSkills("st");
+    expect(results.length).toBe(5);
   });
 
   it("returns empty array when no match is found", () => {
