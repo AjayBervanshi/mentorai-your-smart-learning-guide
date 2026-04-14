@@ -176,6 +176,7 @@ export default function Onboarding() {
                     <button
                       key={l}
                       onClick={() => setCurrentLevel(l)}
+                      aria-pressed={currentLevel === l}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
                         currentLevel === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                       }`}
@@ -217,8 +218,8 @@ export default function Onboarding() {
                 <div className="space-y-3">
                   {skills.map((s, idx) => (
                     <div key={s.name} className="glass-card p-4 space-y-3">
-                      <span className="font-semibold text-foreground">{s.name}</span>
-                      <div className="flex gap-2">
+                      <span className="font-semibold text-foreground" id={`skill-level-label-${idx}`}>{s.name}</span>
+                      <div className="flex gap-2" role="group" aria-labelledby={`skill-level-label-${idx}`}>
                         {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
                           <button
                             key={l}
@@ -250,7 +251,7 @@ export default function Onboarding() {
                   <h1 className="text-3xl font-bold text-foreground">What's your goal?</h1>
                   <p className="text-muted-foreground">This helps us personalize your learning path and project suggestions.</p>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3" role="group" aria-label="Learning goals">
                   {([
                     { value: "job" as UserGoal, icon: Briefcase, title: "Get a Job", desc: "Prepare for interviews and land a role" },
                     { value: "freelance" as UserGoal, icon: Rocket, title: "Freelance", desc: "Start earning independently" },
@@ -259,6 +260,7 @@ export default function Onboarding() {
                     <button
                       key={g.value}
                       onClick={() => setGoal(g.value)}
+                      aria-pressed={goal === g.value}
                       className={`w-full glass-card p-4 flex items-center gap-4 text-left transition-all ${
                         goal === g.value ? "ring-2 ring-primary glow-primary" : "hover:bg-secondary/50"
                       }`}
