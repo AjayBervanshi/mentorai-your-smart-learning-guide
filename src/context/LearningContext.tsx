@@ -302,7 +302,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
   const updateSkillProgress = useCallback(
     async (skillId: string, topicId: string, score: number) => {
-      if (!userId) return;
+      if (!userId || !profile) return;
 
       try {
         await supabase
