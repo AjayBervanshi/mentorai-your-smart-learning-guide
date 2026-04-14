@@ -127,7 +127,7 @@ Return JSON array:
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      console.error("AI gateway error:", aiResponse.status);
+      console.error("AI gateway error:", aiResponse.status, aiResponse.statusText);
       throw new Error("AI generation failed");
     }
 
