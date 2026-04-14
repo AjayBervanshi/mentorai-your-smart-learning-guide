@@ -35,12 +35,43 @@ export type Database = {
         }
         Relationships: []
       }
+      topic_content: {
+        Row: {
+          content_type: string
+          created_at: string | null
+          id: string
+          lesson_content: Json | null
+          quiz_questions: Json | null
+          skill_name: string
+          topic_title: string
+        }
+        Insert: {
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          lesson_content?: Json | null
+          quiz_questions?: Json | null
+          skill_name: string
+          topic_title: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string | null
+          id?: string
+          lesson_content?: Json | null
+          quiz_questions?: Json | null
+          skill_name?: string
+          topic_title?: string
+        }
+        Relationships: []
+      }
       user_learning_profiles: {
         Row: {
           daily_time: number
           goal: string
           id: string
           joined_date: string | null
+          last_active_date: string | null
           streak: number | null
           total_xp: number | null
           user_id: string
@@ -50,6 +81,7 @@ export type Database = {
           goal: string
           id?: string
           joined_date?: string | null
+          last_active_date?: string | null
           streak?: number | null
           total_xp?: number | null
           user_id: string
@@ -59,6 +91,7 @@ export type Database = {
           goal?: string
           id?: string
           joined_date?: string | null
+          last_active_date?: string | null
           streak?: number | null
           total_xp?: number | null
           user_id?: string
