@@ -141,7 +141,7 @@ Return JSON array:
     try {
       parsed = JSON.parse(content);
     } catch {
-      console.error("Failed to parse AI response");
+      console.error("Failed to parse AI response of length:", content.length);
       throw new Error("AI returned invalid JSON");
     }
 
