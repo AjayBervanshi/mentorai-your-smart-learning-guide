@@ -76,7 +76,9 @@ export default function Auth() {
         redirect_uri: window.location.origin,
       });
       if (result.error) {
-        toast.error(result.error.message || "Google sign-in failed");
+        // Security Fix: Do not leak detailed error messages to user
+        console.error('Google sign-in error from provider:', result.error);
+        toast.error("Google sign-in failed. Please try again.");
       }
       if (result.redirected) return;
     } catch (err: unknown) {
