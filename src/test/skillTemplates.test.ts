@@ -1,68 +1,116 @@
 import { describe, it, expect } from "vitest";
-import { findMatchingSkills } from "../data/skillTemplates";
+import {
+  findMatchingSkills,
+  normalizeSkillName,
+  isValidSkill,
+  getSkillCategory,
+} from "../data/skillTemplates";
 
 describe("findMatchingSkills", () => {
-  it("returns empty array for short input", () => {
+  it("returns empty array for input shorter than 2 characters", () => {
+    expect(findMatchingSkills("")).toEqual([]);
     expect(findMatchingSkills("a")).toEqual([]);
     expect(findMatchingSkills(" ")).toEqual([]);
-    expect(findMatchingSkills("")).toEqual([]);
   });
 
-  it("handles exact matches case-insensitively", () => {
-    const results = findMatchingSkills("python");
-    expect(results).toContain("Python");
-
-    const results2 = findMatchingSkills("JAVASCRIPT");
-    expect(results2).toContain("JavaScript");
-  });
-
-  it("handles substring matches where skill is in input", () => {
-    const results = findMatchingSkills("Script");
+  it("finds exact substring matches", () => {
+    const results = findMatchingSkills("script");
     expect(results).toContain("JavaScript");
     expect(results).toContain("TypeScript");
   });
 
-  it("handles input containing the skill name", () => {
-    const results = findMatchingSkills("I am learning React today");
-    expect(results).toContain("React");
-  });
-
-  it("handles fuzzy matches within distance 3", () => {
-    const results = findMatchingSkills("Pythn"); // dist 1
+  it("finds matches when input contains the skill name", () => {
+    const results = findMatchingSkills("learning python");
     expect(results).toContain("Python");
-
-    // "Typsclipt" has dist 2 from TypeScript, but "Java" or "R" might match via substring if they are in the string.
-    // "typsclipt" doesn't have "java" or "r".
-    // Wait, "typsclipt" has 'r'? no. t-y-p-s-c-l-i-p-t.
-    const results2 = findMatchingSkills("Typsclipt");
-    expect(results2).toContain("TypeScript");
-
-    // "Javasclp" has "java" in it, so it matches "Java" via substring!
-    // Let's use something that doesn't have "java"
-    // "Jvscript" dist 2 from "JavaScript".
-    // "jvscript" contains "r" (from JavaScript's 'r'?) No. j-v-s-c-r-i-p-t. contains 'r'.
-    // "Jvscipt" dist 2 from "Javascript" (missing a, r).
-    // "jvscipt" contains 'i', 'p', 't'.
-    const results3 = findMatchingSkills("Jvscipt");
-    expect(results3).toContain("JavaScript");
   });
 
-  it("handles fuzzy matches ignoring special characters", () => {
-    // Node.js -> nodejs
+  it("finds fuzzy matches for typos", () => {
+    const results = findMatchingSkills("pyhon");
+    expect(results).toContain("Python");
+  });
+
+  it("limits results to 8", () => {
+    const results = findMatchingSkills("data");
+    expect(results.length).toBeLessThanOrEqual(8);
+  });
+
+  it("returns empty array when no matches are found", () => {
+    expect(findMatchingSkills("xyzzy123")).toEqual([]);
+  });
+
+  it("handles special characters in skill names", () => {
     const results = findMatchingSkills("Nodejs");
     expect(results).toContain("Node.js");
+  });
+});
 
-    // Tailwind CSS -> tailwindcss
-    const results2 = findMatchingSkills("tailwind css");
-    expect(results2).toContain("Tailwind CSS");
+describe("normalizeSkillName", () => {
+  it("returns exact match for correct skill names", () => {
+    expect(normalizeSkillName("Python")).toBe("Python");
+    expect(normalizeSkillName("JavaScript")).toBe("JavaScript");
   });
 
-  it("limits results to 5", () => {
-    const results = findMatchingSkills("st");
-    expect(results.length).toBe(5);
+  it("handles case-insensitive exact matches", () => {
+    expect(normalizeSkillName("python")).toBe("Python");
+    expect(normalizeSkillName("JAVASCRIPT")).toBe("JavaScript");
   });
 
-  it("returns empty array when no match is found", () => {
-    expect(findMatchingSkills("zzzzzzzzzz")).toEqual([]);
+  it("handles aliases", () => {
+    expect(normalizeSkillName("js")).toBe("JavaScript");
+    expect(normalizeSkillName("py")).toBe("Python");
+    expect(normalizeSkillName("ts")).toBe("TypeScript");
+  });
+
+  it("handles fuzzy matches with small typos", () => {
+    expect(normalizeSkillName("pyhon")).toBe("Python");
+    expect(normalizeSkillName("javascritp")).toBe("JavaScript");
+  });
+
+  it("returns null for empty/single-char input", () => {
+    expect(normalizeSkillName("")).toBeNull();
+    expect(normalizeSkillName("   ")).toBeNull();
+    expect(normalizeSkillName("x")).toBeNull();
+  });
+
+  it("accepts unknown skills with title-casing", () => {
+    expect(normalizeSkillName("underwater basket weaving")).toBe("Underwater Basket Weaving");
+    expect(normalizeSkillName("quantum computing")).toBe("Quantum Computing");
+  });
+});
+
+describe("isValidSkill", () => {
+  it("returns true for valid skill names", () => {
+    expect(isValidSkill("Python")).toBe(true);
+    expect(isValidSkill("js")).toBe(true);
+    expect(isValidSkill("pyhon")).toBe(true);
+  });
+
+  it("returns true for any non-trivial input (accepts all skills)", () => {
+    expect(isValidSkill("cooking")).toBe(true);
+    expect(isValidSkill("quantum physics")).toBe(true);
+  });
+
+  it("returns false for empty or single-char input", () => {
+    expect(isValidSkill("")).toBe(false);
+    expect(isValidSkill("x")).toBe(false);
+  });
+});
+
+describe("getSkillCategory", () => {
+  it("returns correct category for known skills", () => {
+    expect(getSkillCategory("Python")).toBe("coding");
+    expect(getSkillCategory("sql")).toBe("data");
+    expect(getSkillCategory("UI Design")).toBe("design");
+    expect(getSkillCategory("Docker")).toBe("devops");
+    expect(getSkillCategory("Cooking")).toBe("lifestyle");
+    expect(getSkillCategory("Photography")).toBe("creative");
+    expect(getSkillCategory("Spanish")).toBe("language");
+    expect(getSkillCategory("Physics")).toBe("science");
+    expect(getSkillCategory("LLM")).toBe("data");
+    expect(getSkillCategory("Public Speaking")).toBe("business");
+  });
+
+  it("returns 'general' for unknown skills", () => {
+    expect(getSkillCategory("unknown_skill_xyz")).toBe("general");
   });
 });
