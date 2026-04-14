@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Lock, Brain, ChevronRight, Loader2 } from "lucide-react";
+import { Mail, Lock, Brain, ChevronRight, Loader2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +27,8 @@ export default function Auth() {
         if (error) throw error;
         toast.success("Check your email for the reset link!");
         setMode("login");
-      } catch (err: any) {
-        toast.error(err.message || "Failed to send reset email");
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : "Failed to send reset email");
       } finally {
         setLoading(false);
       }
@@ -46,7 +47,6 @@ export default function Auth() {
         });
         if (error) throw error;
 
-        // Insert profile directly (trigger on auth.users is blocked)
         if (data.user) {
           await supabase.from("profiles").upsert({
             id: data.user.id,
@@ -62,8 +62,8 @@ export default function Auth() {
         });
         if (error) throw error;
       }
-    } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -76,11 +76,13 @@ export default function Auth() {
         redirect_uri: window.location.origin,
       });
       if (result.error) {
-        toast.error(result.error.message || "Google sign-in failed");
+        // Security Fix: Do not leak detailed error messages to user
+        console.error('Google sign-in error from provider:', result.error);
+        toast.error("Google sign-in failed. Please try again.");
       }
       if (result.redirected) return;
-    } catch (err: any) {
-      toast.error(err.message || "Google sign-in failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Google sign-in failed");
     } finally {
       setLoading(false);
     }
@@ -93,12 +95,18 @@ export default function Auth() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm space-y-6"
       >
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4">
+        <div className="text-center space-y-3">
+          <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center mx-auto mb-4 glow-primary">
             <Brain className="w-8 h-8 text-primary-foreground" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">MentorAI</h1>
-          <p className="text-muted-foreground text-sm">Your AI-powered learning companion</p>
+          <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+            {mode === "login"
+              ? "Welcome back! Sign in to continue learning anything — coding, cooking, languages, and more."
+              : mode === "signup"
+              ? "Join MentorAI and start learning anything — from AI to cooking, free and personalized."
+              : "No worries — we'll help you reset your password."}
+          </p>
         </div>
 
         {mode !== "forgot" && (
@@ -120,7 +128,7 @@ export default function Auth() {
 
             <div className="flex items-center gap-3">
               <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
+              <span className="text-xs text-muted-foreground">or continue with email</span>
               <div className="flex-1 h-px bg-border" />
             </div>
           </>
@@ -134,28 +142,41 @@ export default function Auth() {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="email"
-              placeholder="Email"
+              placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10 bg-secondary border-border"
+              className="pl-10 bg-secondary border-border h-11"
               required
             />
           </div>
           {mode !== "forgot" && (
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 bg-secondary border-border"
-                required
-                minLength={6}
-              />
+            <div className="space-y-1.5">
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 pr-10 bg-secondary border-border h-11"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {mode === "signup" && password.length > 0 && password.length < 6 && (
+                <p className="text-xs text-amber">Password needs at least 6 characters</p>
+              )}
             </div>
           )}
-          <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground gap-2">
+          <Button type="submit" disabled={loading} className="w-full gradient-primary text-primary-foreground gap-2 h-11">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {mode === "login" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Reset Link"}
             <ChevronRight className="w-4 h-4" />
@@ -167,7 +188,7 @@ export default function Auth() {
             onClick={() => setMode("forgot")}
             className="text-xs text-primary hover:underline w-full text-center block"
           >
-            Forgot password?
+            Forgot your password?
           </button>
         )}
 
