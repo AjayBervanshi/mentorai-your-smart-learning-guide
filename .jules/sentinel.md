@@ -1,3 +1,8 @@
+
+## 2024-05-24 - CSS Injection via dangerouslySetInnerHTML in dynamic styles
+**Vulnerability:** The Shadcn UI `ChartContainer` component used the `id` prop to generate CSS dynamically and injected it using `dangerouslySetInnerHTML`. The `id` was not properly sanitized, which could allow a malicious user to inject arbitrary CSS or cause DOM-based XSS if the `id` was derived from user input.
+**Learning:** Components that dynamically generate styles and inject them using `dangerouslySetInnerHTML` are vulnerable to CSS injection if any part of the generated style depends on unsanitized inputs, including common props like `id`.
+**Prevention:** Always strictly sanitize dynamic props (e.g., stripping non-alphanumeric characters) that are interpolated into strings destined for `dangerouslySetInnerHTML` to prevent injection attacks.
 ## 2024-06-19 - DOM-based XSS via CSS Injection in Shadcn UI Chart Component
 **Vulnerability:** The Shadcn UI `ChartContainer` component dynamically generated CSS inside a `<style dangerouslySetInnerHTML={{...}} />` tag. The `id` prop was directly interpolated into the CSS string without sanitization. An attacker could potentially inject malicious CSS or escape the style tag if the `id` was controlled by user input.
 **Learning:** Components that rely on string interpolation for dynamically generated styles inside `dangerouslySetInnerHTML` are prone to CSS injection and potentially DOM-based XSS if attributes can be closed prematurely.
