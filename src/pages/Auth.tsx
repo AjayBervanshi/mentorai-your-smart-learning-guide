@@ -139,6 +139,7 @@ export default function Auth() {
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
+              aria-label="Email address"
               type="email"
               placeholder="Email address"
               value={email}
@@ -152,6 +153,7 @@ export default function Auth() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  aria-label="Password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Password"
                   value={password}
