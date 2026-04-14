@@ -1,3 +1,3 @@
-## 2024-03-24 - [Optimize Network Waterfalls in DB Writes]
-**Learning:** Found an anti-pattern in `completeOnboarding` and `updateSkillProgress` where database operations (like inserting skills/topics and updating progress/xp) were performed sequentially in loops or distinct await blocks, causing a network waterfall and slowing down UI interaction.
-**Action:** Use `Promise.all` to parallelize independent database write/update operations when possible to minimize network latency on the client side.
+## 2024-05-18 - [Optimizing chained array passes]
+**Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
+**Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.

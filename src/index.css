@@ -90,8 +90,18 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+    overscroll-behavior-y: none;
+  }
+  ::selection {
+    background: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
   }
 }
 
@@ -120,4 +130,27 @@
   .glow-accent {
     box-shadow: 0 0 20px hsl(var(--violet) / 0.3), 0 0 60px hsl(var(--violet) / 0.1);
   }
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  .text-amber {
+    color: hsl(var(--amber));
+  }
+  .text-violet {
+    color: hsl(var(--violet));
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 8px hsl(var(--emerald) / 0.2); }
+  50% { box-shadow: 0 0 20px hsl(var(--emerald) / 0.4); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
 }
