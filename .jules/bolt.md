@@ -11,3 +11,7 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+
+## 2024-05-18 - [Optimizing findMatchingSkills early breaking and loop split]
+**Learning:** Combining two array iteration goals into a single loop does not guarantee better performance, especially if the secondary pass (e.g., Levenshtein distance) is significantly more expensive than the first pass (e.g., native substring matching) and previously bypassed. Always measure and profile. Breaking early avoids O(N*logN) sorting costs and speeds up completion.
+**Action:** Always maintain early returns and short-circuits. When optimizing chained method passes, perform cheap logic first and immediately break out or return if a threshold is reached before falling back to an expensive secondary logic path.
