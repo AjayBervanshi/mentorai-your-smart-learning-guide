@@ -236,7 +236,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-8 text-center space-y-3">
             <BookOpen className="w-10 h-10 text-muted-foreground mx-auto" />
             <p className="text-foreground font-medium">No skills added yet</p>
-            <p className="text-sm text-muted-foreground">Tap "Add Skill" above to start your learning journey</p>
+            <Button onClick={() => setShowAddSkill(true)} className="mt-2 gradient-primary text-primary-foreground">
+              Add Your First Skill
+            </Button>
           </motion.div>
         ) : (
           profile.skills.map((skill, i) => {
