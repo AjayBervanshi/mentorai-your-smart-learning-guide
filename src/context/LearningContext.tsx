@@ -318,14 +318,15 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           .eq("user_id", userId);
 
         if (allTopics) {
-          const completed = allTopics.filter((t) => t.completed).length;
-          const progress = Math.round((completed / allTopics.length) * 100);
+          const completedCount = allTopics.filter((t) => t.completed).length;
+          const calculatedProgress = Math.round((completedCount / allTopics.length) * 100);
 
+          // Note: using completedCount as next topic index logically, assuming sequential learning.
           await supabase
             .from("user_skills")
-            .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
+            .update({ progress: calculatedProgress, current_topic_index: completedCount })
             .eq("id", skillId)
-            .eq("user_id", userId),
+            .eq("user_id", userId);
 
           // Update XP and streak
           const today = new Date().toISOString().split("T")[0];
