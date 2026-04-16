@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-05-24 - [Optimize search operations in tight loops]
+**Learning:** Typing in an autocomplete search bar triggers search functions repeatedly. Chained array methods (`.map().filter().sort().map()`) and dynamic array allocations within algorithms like Levenshtein distance cause unnecessary GC pressure and slowdowns.
+**Action:** Replace chained array methods with single-pass loops and early exits, and optimize distance algorithms to minimize array allocations.
