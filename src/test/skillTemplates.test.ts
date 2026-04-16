@@ -4,6 +4,7 @@ import {
   normalizeSkillName,
   isValidSkill,
   getSkillCategory,
+  getProjectsForSkill,
 } from "../data/skillTemplates";
 
 describe("findMatchingSkills", () => {
@@ -112,5 +113,34 @@ describe("getSkillCategory", () => {
 
   it("returns 'general' for unknown skills", () => {
     expect(getSkillCategory("unknown_skill_xyz")).toBe("general");
+  });
+});
+
+describe("getProjectsForSkill", () => {
+  it("returns coding projects for 'Python'", () => {
+    const projects = getProjectsForSkill("Python");
+    expect(projects.length).toBeGreaterThan(0);
+    expect(projects[0].title).toBe("Build a Personal Portfolio");
+  });
+
+  it("returns design projects for 'UI Design'", () => {
+    const projects = getProjectsForSkill("UI Design");
+    expect(projects.length).toBeGreaterThan(0);
+    expect(projects[0].title).toBe("Redesign a Landing Page");
+  });
+
+  it("returns general projects for an unknown skill", () => {
+    const projects = getProjectsForSkill("Unknown Skill XYZ");
+    expect(projects.length).toBeGreaterThan(0);
+    expect(projects[0].title).toBe("Learning Journal");
+  });
+
+  it("returns project objects with expected properties", () => {
+    const projects = getProjectsForSkill("Python");
+    const project = projects[0];
+    expect(project).toHaveProperty("title");
+    expect(project).toHaveProperty("desc");
+    expect(project).toHaveProperty("difficulty");
+    expect(project).toHaveProperty("minProgress");
   });
 });
