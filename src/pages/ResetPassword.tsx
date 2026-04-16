@@ -90,6 +90,7 @@ export default function ResetPassword() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
+                aria-label="New password"
                 type="password"
                 placeholder="New password"
                 value={password}
@@ -102,6 +103,7 @@ export default function ResetPassword() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
+                aria-label="Confirm new password"
                 type="password"
                 placeholder="Confirm new password"
                 value={confirmPassword}
