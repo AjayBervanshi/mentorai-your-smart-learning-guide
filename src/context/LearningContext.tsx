@@ -323,9 +323,9 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
           await supabase
             .from("user_skills")
-            .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
+            .update({ progress: progress })
             .eq("id", skillId)
-            .eq("user_id", userId),
+            .eq("user_id", userId);
 
           // Update XP and streak
           const today = new Date().toISOString().split("T")[0];
