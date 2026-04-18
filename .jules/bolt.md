@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-06-12 - [Optimizing dynamic arrays in tight algorithms]
+**Learning:** In tight, frequently called algorithms like string distance checks (Levenshtein) during autocomplete typing, dynamic arrays like `new Array()` or `Array.from()` create massive garbage collection pressure. This creates a significant bottleneck on keystroke responsiveness.
+**Action:** Always refactor to use single 1D arrays with pre-allocated buffers (e.g., `new Uint16Array(100)`) outside the loop function, and fall back to allocation only for unusually large inputs.
