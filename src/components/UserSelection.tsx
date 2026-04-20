@@ -39,6 +39,7 @@ export default function UserSelection({ onCreateNew }: UserSelectionProps) {
                 </div>
               </div>
               <Button
+                aria-label="Delete user"
                 variant="ghost"
                 size="icon"
                 onClick={(e) => {
