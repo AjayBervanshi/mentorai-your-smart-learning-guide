@@ -249,27 +249,29 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// ⚡ Bolt: Optimized Levenshtein distance algorithm using a single Uint32Array buffer
+// instead of dynamic array allocations (Array.from, new Array) in a loop, reducing
+// memory footprint and GC pressure during fuzzy autocomplete searches.
 function levenshtein(a: string, b: string): number {
   if (a.length < b.length) [a, b] = [b, a];
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  const row = new Uint32Array(n + 1);
+  for (let i = 0; i <= n; i++) row[i] = i;
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prev = i;
+    const charA = a[i - 1];
     for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
-      );
+      const cost = charA === b[j - 1] ? 0 : 1;
+      const val = Math.min(row[j] + 1, prev + 1, row[j - 1] + cost);
+      row[j - 1] = prev;
+      prev = val;
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    row[n] = prev;
   }
-  return prevRow[n];
+  return row[n];
 }
 
 /**
