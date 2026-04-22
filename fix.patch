@@ -1,0 +1,16 @@
+--- src/context/LearningContext.tsx
++++ src/context/LearningContext.tsx
+@@ -321,12 +321,12 @@
+           const completed = allTopics.filter((t) => t.completed).length;
+           const progress = Math.round((completed / allTopics.length) * 100);
+
+           await supabase
+             .from("user_skills")
+-            .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
++            .update({ progress, current_topic_index: Math.min(completed, allTopics.length - 1) })
+             .eq("id", skillId)
+-            .eq("user_id", userId),
++            .eq("user_id", userId);
+
+           // Update XP and streak
+           const today = new Date().toISOString().split("T")[0];
