@@ -1,0 +1,70 @@
+--- src/context/LearningContext.tsx
++++ src/context/LearningContext.tsx
+@@ -305,25 +305,19 @@
+       if (!userId || !profile) return;
+
+       try {
+-        await supabase
+-          .from("user_topics")
+-          .update({ completed: score >= 60, score })
+-          .eq("id", topicId)
+-          .eq("user_id", userId);
+-
+-        const { data: allTopics } = await supabase
+-          .from("user_topics")
+-          .select("*")
+-          .eq("skill_id", skillId)
+-          .eq("user_id", userId);
+-
+-        if (allTopics) {
+-          const completed = allTopics.filter((t) => t.completed).length;
+-          const progress = Math.round((completed / allTopics.length) * 100);
+-
+-          await supabase
+-            .from("user_skills")
+-            .update({ progress, current_topic_index: Math.min(completed, allTopics.length - 1) })
+-            .eq("id", skillId)
+-            .eq("user_id", userId);
+-
+-          // Update XP and streak
+-          const today = new Date().toISOString().split("T")[0];
+-          const lastActive = profile?.joinedDate ? undefined : undefined; // we need to query
+-
+-          const { data: lpData } = await supabase
+-            .from("user_learning_profiles")
+-            .select("last_active_date, streak, total_xp")
+-            .eq("user_id", userId)
+-            .single();
++        // ⚡ Bolt: Batch independent Supabase queries using Promise.all()
++        // We first update the user topic and get user_learning_profiles in parallel
++        // The only sequential dependency is calculating the skill progress
++        const [_, { data: lpData }, { data: allTopics }] = await Promise.all([
++          supabase
++            .from("user_topics")
++            .update({ completed: score >= 60, score })
++            .eq("id", topicId)
++            .eq("user_id", userId),
++          supabase
++            .from("user_learning_profiles")
++            .select("last_active_date, streak, total_xp")
++            .eq("user_id", userId)
++            .single(),
++          supabase
++            .from("user_topics")
++            .select("*")
++            .eq("skill_id", skillId)
++            .eq("user_id", userId)
++        ]);
++
++        if (allTopics) {
++          const completed = allTopics.filter((t) => t.id === topicId ? score >= 60 : t.completed).length;
++          const progress = Math.round((completed / allTopics.length) * 100);
++
++          const updateSkillPromise = supabase
++            .from("user_skills")
++            .update({ progress, current_topic_index: Math.min(completed, allTopics.length - 1) })
++            .eq("id", skillId)
++            .eq("user_id", userId);
++
++          // Update XP and streak
++          const today = new Date().toISOString().split("T")[0];
