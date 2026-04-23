@@ -131,25 +131,34 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
       if (!userId) return;
 
       try {
-        const { error: lpError } = await supabase.from("user_learning_profiles").insert({
+        // ⚡ Bolt: Bulk insert skills and learning profile to minimize network roundtrips
+        const skillsInsertPayload = skills.map(s => ({
           user_id: userId,
-          goal,
-          daily_time: dailyTime,
-        });
-        if (lpError) throw lpError;
+          name: s.name,
+          level: s.level
+        }));
 
-        const userSkills: UserSkill[] = [];
+        const [lpResult, skillsResult] = await Promise.all([
+          supabase.from("user_learning_profiles").insert({
+            user_id: userId,
+            goal,
+            daily_time: dailyTime,
+          }),
+          supabase.from("user_skills").insert(skillsInsertPayload).select()
+        ]);
 
-        for (const s of skills) {
-          const { data: skillData, error: skillError } = await supabase
-            .from("user_skills")
-            .insert({ user_id: userId, name: s.name, level: s.level })
-            .select()
-            .single();
-          if (skillError) throw skillError;
+        if (lpResult.error) throw lpResult.error;
+        if (skillsResult.error) throw skillsResult.error;
 
+        const insertedSkills = skillsResult.data;
+        const topicInserts = [];
+
+        // Prepare bulk insert for all topics of all skills
+        for (let idx = 0; idx < skills.length; idx++) {
+          const s = skills[idx];
+          const skillData = insertedSkills[idx];
           const topicTemplates = getTopicsForSkill(s.name, s.level);
-          const topicInserts = topicTemplates.map((t, i) => ({
+          const mapped = topicTemplates.map((t, i) => ({
             skill_id: skillData.id,
             user_id: userId,
             title: t.title,
@@ -158,21 +167,32 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             sort_order: i,
             subtopics: t.subtopics,
           }));
+          topicInserts.push(...mapped);
+        }
 
-          const { data: topicData, error: topicError } = await supabase
-            .from("user_topics")
-            .insert(topicInserts)
-            .select();
-          if (topicError) throw topicError;
+        const { data: topicData, error: topicError } = await supabase
+          .from("user_topics")
+          .insert(topicInserts)
+          .select();
 
-          const topics: Topic[] = (topicData || []).map((t) => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || "",
-            level: t.level as SkillLevel,
-            completed: false,
-            subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
-          }));
+        if (topicError) throw topicError;
+
+        const userSkills: UserSkill[] = [];
+
+        for (let idx = 0; idx < skills.length; idx++) {
+          const s = skills[idx];
+          const skillData = insertedSkills[idx];
+
+          const topics: Topic[] = (topicData || [])
+            .filter(t => t.skill_id === skillData.id)
+            .map((t) => ({
+              id: t.id,
+              title: t.title,
+              description: t.description || "",
+              level: t.level as SkillLevel,
+              completed: false,
+              subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+            }));
 
           userSkills.push({
             id: skillData.id,
@@ -325,7 +345,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             .from("user_skills")
             .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
             .eq("id", skillId)
-            .eq("user_id", userId),
+            .eq("user_id", userId);
 
           // Update XP and streak
           const today = new Date().toISOString().split("T")[0];
