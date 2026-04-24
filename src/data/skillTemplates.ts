@@ -254,22 +254,26 @@ function levenshtein(a: string, b: string): number {
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  // ⚡ Bolt: Optimized Levenshtein distance using a single 1D array
+  // to eliminate redundant memory allocations during loops.
+  const row = new Array(n + 1);
+  for (let i = 0; i <= n; i++) row[i] = i;
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prevDiag = row[0];
+    row[0] = i;
     for (let j = 1; j <= n; j++) {
+      const prevDiagTemp = row[j];
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      row[j] = Math.min(
+        row[j] + 1,
+        row[j - 1] + 1,
+        prevDiag + cost
       );
+      prevDiag = prevDiagTemp;
     }
-    [prevRow, currRow] = [currRow, prevRow];
   }
-  return prevRow[n];
+  return row[n];
 }
 
 /**
@@ -334,15 +338,29 @@ export function findMatchingSkills(input: string): string[] {
 
   if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
+  // ⚡ Bolt: Replaced chained array methods with a single O(n) loop
+  // and added early-exit length checking to skip expensive operations.
+  const fuzzyResults: { skill: string; dist: number }[] = [];
+
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    if (
+      Math.abs(normalized.length - skillObj.lower.length) > 3 &&
+      Math.abs(clean.length - skillObj.clean.length) > 3
+    ) {
+      continue;
+    }
+
+    const dist = Math.min(
+      levenshtein(normalized, skillObj.lower),
+      levenshtein(clean, skillObj.clean)
+    );
+
+    if (dist <= 3) {
+      fuzzyResults.push({ skill: skillObj.original, dist });
+    }
+  }
+
+  const fuzzy = fuzzyResults
     .sort((a, b) => a.dist - b.dist)
     .map((x) => x.skill);
 
