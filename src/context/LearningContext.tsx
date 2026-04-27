@@ -140,17 +140,26 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
         const userSkills: UserSkill[] = [];
 
-        for (const s of skills) {
-          const { data: skillData, error: skillError } = await supabase
-            .from("user_skills")
-            .insert({ user_id: userId, name: s.name, level: s.level })
-            .select()
-            .single();
-          if (skillError) throw skillError;
+        // ⚡ Bolt: Replaced sequential inserts with bulk insert for better performance
+        const skillsInsert = skills.map(s => ({
+          user_id: userId,
+          name: s.name,
+          level: s.level
+        }));
 
-          const topicTemplates = getTopicsForSkill(s.name, s.level);
+        const { data: skillsData, error: skillsError } = await supabase
+          .from("user_skills")
+          .insert(skillsInsert)
+          .select();
+
+        if (skillsError) throw skillsError;
+
+        const allTopicInserts = [];
+
+        for (const skill of skillsData) {
+          const topicTemplates = getTopicsForSkill(skill.name, skill.level as SkillLevel);
           const topicInserts = topicTemplates.map((t, i) => ({
-            skill_id: skillData.id,
+            skill_id: skill.id,
             user_id: userId,
             title: t.title,
             description: t.description,
@@ -158,14 +167,19 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             sort_order: i,
             subtopics: t.subtopics,
           }));
+          allTopicInserts.push(...topicInserts);
+        }
 
-          const { data: topicData, error: topicError } = await supabase
-            .from("user_topics")
-            .insert(topicInserts)
-            .select();
-          if (topicError) throw topicError;
+        const { data: topicsData, error: topicsError } = await supabase
+          .from("user_topics")
+          .insert(allTopicInserts)
+          .select();
 
-          const topics: Topic[] = (topicData || []).map((t) => ({
+        if (topicsError) throw topicsError;
+
+        for (const skill of skillsData) {
+          const skillTopicsData = (topicsData || []).filter(t => t.skill_id === skill.id);
+          const topics: Topic[] = skillTopicsData.map((t) => ({
             id: t.id,
             title: t.title,
             description: t.description || "",
@@ -175,9 +189,9 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           }));
 
           userSkills.push({
-            id: skillData.id,
-            name: s.name,
-            level: s.level,
+            id: skill.id,
+            name: skill.name,
+            level: skill.level as SkillLevel,
             progress: 0,
             currentTopicIndex: 0,
             weakTopics: [],
@@ -325,7 +339,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             .from("user_skills")
             .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
             .eq("id", skillId)
-            .eq("user_id", userId),
+            .eq("user_id", userId);
 
           // Update XP and streak
           const today = new Date().toISOString().split("T")[0];
