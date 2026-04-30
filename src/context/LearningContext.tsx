@@ -138,15 +138,21 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         });
         if (lpError) throw lpError;
 
-        const userSkills: UserSkill[] = [];
+        // ⚡ Bolt: Optimize Supabase record creation for relational data by performing
+        // a bulk insert of parent records to retrieve generated IDs, then map and
+        // bulk insert child records in a single secondary operation to minimize roundtrips.
+        const { data: skillsData, error: skillsError } = await supabase
+          .from("user_skills")
+          .insert(skills.map(s => ({ user_id: userId, name: s.name, level: s.level })))
+          .select();
 
-        for (const s of skills) {
-          const { data: skillData, error: skillError } = await supabase
-            .from("user_skills")
-            .insert({ user_id: userId, name: s.name, level: s.level })
-            .select()
-            .single();
-          if (skillError) throw skillError;
+        if (skillsError) throw skillsError;
+
+        const allTopicInserts = [];
+
+        for (let idx = 0; idx < (skillsData || []).length; idx++) {
+          const skillData = skillsData[idx];
+          const s = skills[idx];
 
           const topicTemplates = getTopicsForSkill(s.name, s.level);
           const topicInserts = topicTemplates.map((t, i) => ({
@@ -159,13 +165,23 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             subtopics: t.subtopics,
           }));
 
-          const { data: topicData, error: topicError } = await supabase
-            .from("user_topics")
-            .insert(topicInserts)
-            .select();
-          if (topicError) throw topicError;
+          allTopicInserts.push(...topicInserts);
+        }
 
-          const topics: Topic[] = (topicData || []).map((t) => ({
+        const { data: allTopicsData, error: topicsError } = await supabase
+          .from("user_topics")
+          .insert(allTopicInserts)
+          .select();
+
+        if (topicsError) throw topicsError;
+
+        const userSkills: UserSkill[] = [];
+        for (let idx = 0; idx < (skillsData || []).length; idx++) {
+          const skillData = skillsData[idx];
+          const s = skills[idx];
+          const topicDataForSkill = (allTopicsData || []).filter(t => t.skill_id === skillData.id);
+
+          const topics: Topic[] = topicDataForSkill.map((t) => ({
             id: t.id,
             title: t.title,
             description: t.description || "",
