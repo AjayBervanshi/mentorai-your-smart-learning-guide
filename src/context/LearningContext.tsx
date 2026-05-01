@@ -50,6 +50,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             .from("user_skills")
             .select("*")
             .eq("user_id", userId),
+
           supabase
             .from("user_topics")
             .select("*")
@@ -325,7 +326,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             .from("user_skills")
             .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
             .eq("id", skillId)
-            .eq("user_id", userId),
+            .eq("user_id", userId);
 
           // Update XP and streak
           const today = new Date().toISOString().split("T")[0];
