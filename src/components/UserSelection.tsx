@@ -41,6 +41,7 @@ export default function UserSelection({ onCreateNew }: UserSelectionProps) {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={`Delete ${user.name}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   deleteUser(user.id);
