@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2026-04-30 - Local State Synchronization in Batched Updates
+**Learning:** When optimizing database interactions by replacing redundant `SELECT` queries with local state derivations, ensure all interdependent properties (such as gamification streaks and `lastActive` timestamps) are explicitly and accurately synchronized in the local React Context state. Failing to map these temporal values (e.g., omitting `lastActive: today` during a profile update) can cause critical functional regressions like incorrectly incrementing streaks multiple times in a single day.
+**Action:** When updating local state, verify that all properties that were previously fetched from the database, particularly temporal or derived flags, are accurately replicated in the `setProfile` state update.
