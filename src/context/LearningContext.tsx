@@ -305,69 +305,70 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
       if (!userId || !profile) return;
 
       try {
-        await supabase
-          .from("user_topics")
-          .update({ completed: score >= 60, score })
-          .eq("id", topicId)
-          .eq("user_id", userId);
+        const skill = profile.skills.find(s => s.id === skillId);
+        if (!skill) return;
 
-        const { data: allTopics } = await supabase
-          .from("user_topics")
-          .select("*")
-          .eq("skill_id", skillId)
-          .eq("user_id", userId);
+        let completedCount = 0;
+        for (const t of skill.topics) {
+          if (t.id === topicId) {
+             if (score >= 60) completedCount++;
+          } else if (t.completed) {
+            completedCount++;
+          }
+        }
 
-        if (allTopics) {
-          const completed = allTopics.filter((t) => t.completed).length;
-          const progress = Math.round((completed / allTopics.length) * 100);
+        const newProgress = Math.round((completedCount / skill.topics.length) * 100);
+        const newCurrentTopicIndex = Math.min(completedCount, skill.topics.length - 1);
 
-          await supabase
+        const today = new Date().toISOString().split("T")[0];
+        let newStreak = profile.streak || 0;
+        const lastDate = profile.lastActive;
+
+        if (lastDate !== today) {
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+          if (lastDate === yesterdayStr) {
+            newStreak += 1;
+          } else if (!lastDate) {
+            newStreak = 1;
+          } else {
+            newStreak = 1;
+          }
+        } else if (newStreak === 0) {
+          newStreak = 1;
+        }
+
+        const newTotalXP = (profile.totalXP || 0) + score;
+
+        // ⚡ Bolt: Batch independent Supabase queries using Promise.all() to prevent
+        // network waterfalls, and derive state locally instead of redundant SELECTs.
+        await Promise.all([
+          supabase
+            .from("user_topics")
+            .update({ completed: score >= 60, score })
+            .eq("id", topicId)
+            .eq("user_id", userId),
+          supabase
             .from("user_skills")
             .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
             .eq("id", skillId)
             .eq("user_id", userId),
-
-          // Update XP and streak
-          const today = new Date().toISOString().split("T")[0];
-          const lastActive = profile?.joinedDate ? undefined : undefined; // we need to query
-
-          const { data: lpData } = await supabase
+          supabase
             .from("user_learning_profiles")
-            .select("last_active_date, streak, total_xp")
+            .update({
+              total_xp: newTotalXP,
+              streak: newStreak,
+              last_active_date: today,
+            })
             .eq("user_id", userId)
-            .single();
+        ]);
 
-          if (lpData) {
-            let newStreak = lpData.streak || 0;
-            const lastDate = lpData.last_active_date;
-
-            if (lastDate !== today) {
-              const yesterday = new Date();
-              yesterday.setDate(yesterday.getDate() - 1);
-              const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-              if (lastDate === yesterdayStr) {
-                newStreak += 1;
-              } else if (!lastDate) {
-                newStreak = 1;
-              } else {
-                newStreak = 1; // reset
-              }
-            }
-
-            await supabase
-              .from("user_learning_profiles")
-              .update({
-                total_xp: (lpData.total_xp || 0) + score,
-                streak: newStreak,
-                last_active_date: today,
-              })
-              .eq("user_id", userId);
-
-            // Update local state
-            setProfile((prev) => {
-              if (!prev) return prev;
-              const skills = prev.skills.map((skill) => {
+        // Update local state
+        setProfile((prev) => {
+          if (!prev) return prev;
+          const skills = prev.skills.map((skill) => {
                 if (skill.id !== skillId) return skill;
                 const topics = skill.topics.map((t) =>
                   t.id === topicId ? { ...t, completed: score >= 60, score } : t
@@ -398,15 +399,13 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
                   currentTopicIndex: Math.min(completedCount, topics.length - 1),
                 };
               });
-              return { ...prev, skills, totalXP: (lpData.total_xp || 0) + score, streak: newStreak };
+              return { ...prev, skills, totalXP: newTotalXP, streak: newStreak, lastActive: today };
             });
-          }
-        }
       } catch (err) {
         console.error("Failed to update progress:", err);
       }
     },
-    [userId]
+    [userId, profile]
   );
 
   const getActiveSkill = useCallback(() => {
