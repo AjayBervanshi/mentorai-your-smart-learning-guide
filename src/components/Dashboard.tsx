@@ -151,6 +151,40 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </motion.button>
       )}
 
+      {/* Review weak topics */}
+      {weakTopicsList.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="glass-card p-4 space-y-3"
+        >
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber" />
+            <span className="text-sm font-semibold text-foreground">Review weak topics</span>
+            <span className="text-xs text-muted-foreground">({weakTopicsList.length})</span>
+          </div>
+          <div className="space-y-1.5">
+            {weakTopicsList.slice(0, 3).map(({ skill, topic }) => (
+              <button
+                key={topic.id}
+                onClick={() => {
+                  setActiveSkillId(skill.id);
+                  onNavigate("learn");
+                }}
+                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-foreground truncate">{topic.title}</div>
+                  <div className="text-[10px] text-muted-foreground">{skill.name} · scored {topic.score}%</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Daily goal progress */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="glass-card p-4 space-y-3">
         <div className="flex items-center justify-between">
