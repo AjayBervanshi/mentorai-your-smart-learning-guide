@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import { getAppUrl } from "@/lib/auth-utils";
 
 export default function Auth() {
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
@@ -22,7 +23,7 @@ export default function Auth() {
       setLoading(true);
       try {
         const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${getAppUrl()}/reset-password`,
         });
         if (error) throw error;
         toast.success("Check your email for the reset link!");
@@ -43,7 +44,7 @@ export default function Auth() {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: getAppUrl() },
         });
         if (error) throw error;
 
@@ -73,7 +74,7 @@ export default function Auth() {
     setLoading(true);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: getAppUrl(),
       });
       if (result.error) {
         // Security Fix: Do not leak detailed error messages to user
