@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2, Trash2, Target, Clock } from "lucide-react";
+import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2, Trash2, Target, Clock, AlertTriangle } from "lucide-react";
 import { useLearning } from "@/context/LearningContext";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   let totalTopics = 0;
   let completedTopics = 0;
   let currentSkill: typeof profile.skills[0] | undefined = undefined;
+  const weakTopicsList: { skill: typeof profile.skills[0]; topic: typeof profile.skills[0]["topics"][0] }[] = [];
 
   for (const skill of profile.skills) {
     totalProgressSum += skill.progress;
@@ -37,6 +38,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     completedTopics += skill.completedTopics.length;
     if (!currentSkill && skill.progress < 100) {
       currentSkill = skill;
+    }
+    for (const t of skill.topics) {
+      if (t.score !== undefined && t.score < 60) {
+        weakTopicsList.push({ skill, topic: t });
+      }
     }
   }
 
