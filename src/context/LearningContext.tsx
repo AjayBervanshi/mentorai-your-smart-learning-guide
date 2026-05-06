@@ -338,9 +338,9 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             let newStreak = lpData.streak || 0;
             const lastDate = lpData.last_active_date;
 
-            if (lastDate !== today) {
+            if (lastDate !== todayUTC) {
               const yesterday = new Date();
-              yesterday.setDate(yesterday.getDate() - 1);
+              yesterday.setUTCDate(yesterday.getUTCDate() - 1);
               const yesterdayStr = yesterday.toISOString().split("T")[0];
 
               if (lastDate === yesterdayStr) {
@@ -357,7 +357,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
               .update({
                 total_xp: (lpData.total_xp || 0) + score,
                 streak: newStreak,
-                last_active_date: today,
+                last_active_date: todayUTC,
               })
               .eq("user_id", userId);
 
