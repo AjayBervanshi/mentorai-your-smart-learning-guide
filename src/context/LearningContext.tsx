@@ -411,20 +411,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     return profile.skills.find((s) => s.id === activeSkillId) ?? null;
   }, [profile, activeSkillId]);
 
-  const switchUser = useCallback((userId: string | null) => {
-    setAppState(prev => ({ ...prev, activeUserId: userId }));
-    if (userId) {
-      updateProfile(p => ({ ...p, lastActive: new Date().toISOString() }));
-    }
-  }, [updateProfile]);
-
-  const deleteUser = useCallback((userId: string) => {
-    setAppState(prev => ({
-      users: prev.users.filter(u => u.id !== userId),
-      activeUserId: prev.activeUserId === userId ? null : prev.activeUserId
-    }));
-  }, []);
-
   return (
     <LearningContext.Provider
       value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, addSkill, removeSkill, getActiveSkill, setActiveSkillId, activeSkillId }}
