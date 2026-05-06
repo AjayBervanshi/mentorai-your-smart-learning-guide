@@ -40,6 +40,8 @@ export default function LearningScreen() {
   const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [slowLoad, setSlowLoad] = useState(false);
 
   if (!skill || !profile) {
     return (
@@ -53,6 +55,9 @@ export default function LearningScreen() {
 
   const loadContent = async (topic: Topic, type: "lesson" | "quiz") => {
     setLoadingContent(true);
+    setLoadError(null);
+    setSlowLoad(false);
+    const slowTimer = setTimeout(() => setSlowLoad(true), 20000);
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
@@ -65,15 +70,21 @@ export default function LearningScreen() {
 
       if (error) throw error;
 
-      if (type === "lesson" && data.lesson) {
+      if (type === "lesson" && data?.lesson) {
         setLessonContent(data.lesson);
-      } else if (type === "quiz" && data.quiz) {
+      } else if (type === "quiz" && Array.isArray(data?.quiz) && data.quiz.length > 0) {
         setQuizQuestions(data.quiz);
+      } else {
+        throw new Error("Invalid content received");
       }
     } catch (err: unknown) {
-      toast.error("Failed to generate content. Please try again.");
+      const msg = err instanceof Error ? err.message : "Failed to generate content";
+      setLoadError(msg);
+      toast.error("Failed to generate content. Tap retry to try again.");
     } finally {
+      clearTimeout(slowTimer);
       setLoadingContent(false);
+      setSlowLoad(false);
     }
   };
 
