@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2026-04-30 - Autocomplete Algorithm Optimizations
+**Learning:** Optimizing autocomplete operations in tight loops requires avoiding dynamic array allocations. We can optimize Levenshtein distance by using a single shared array buffer (e.g., `Int32Array`) instead of allocating 2D matrices or 2 arrays per function call. Additionally, replacing chained `.map().filter().sort()` methods with a single-pass loop and incorporating early length-difference exits drastically reduces garbage collection pressure.
+**Action:** Use typed array buffers for operations in hot paths and combine functional array methods into single-pass loops where multiple operations are being chained.
