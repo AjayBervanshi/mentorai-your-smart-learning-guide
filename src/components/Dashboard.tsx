@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2, Trash2, Target, Clock } from "lucide-react";
+import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2, Trash2, Target, Clock, AlertTriangle } from "lucide-react";
 import { useLearning } from "@/context/LearningContext";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   let totalTopics = 0;
   let completedTopics = 0;
   let currentSkill: typeof profile.skills[0] | undefined = undefined;
+  const weakTopicsList: { skill: typeof profile.skills[0]; topic: typeof profile.skills[0]["topics"][0] }[] = [];
 
   for (const skill of profile.skills) {
     totalProgressSum += skill.progress;
@@ -37,6 +38,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     completedTopics += skill.completedTopics.length;
     if (!currentSkill && skill.progress < 100) {
       currentSkill = skill;
+    }
+    for (const t of skill.topics) {
+      if (t.score !== undefined && t.score < 60) {
+        weakTopicsList.push({ skill, topic: t });
+      }
     }
   }
 
@@ -143,6 +149,40 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
           </div>
         </motion.button>
+      )}
+
+      {/* Review weak topics */}
+      {weakTopicsList.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="glass-card p-4 space-y-3"
+        >
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber" />
+            <span className="text-sm font-semibold text-foreground">Review weak topics</span>
+            <span className="text-xs text-muted-foreground">({weakTopicsList.length})</span>
+          </div>
+          <div className="space-y-1.5">
+            {weakTopicsList.slice(0, 3).map(({ skill, topic }) => (
+              <button
+                key={topic.id}
+                onClick={() => {
+                  setActiveSkillId(skill.id);
+                  onNavigate("learn");
+                }}
+                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-foreground truncate">{topic.title}</div>
+                  <div className="text-[10px] text-muted-foreground">{skill.name} · scored {topic.score}%</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        </motion.div>
       )}
 
       {/* Daily goal progress */}

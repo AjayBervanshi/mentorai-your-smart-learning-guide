@@ -40,6 +40,8 @@ export default function LearningScreen() {
   const [lessonContent, setLessonContent] = useState<LessonContent | null>(null);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [slowLoad, setSlowLoad] = useState(false);
 
   if (!skill || !profile) {
     return (
@@ -53,6 +55,9 @@ export default function LearningScreen() {
 
   const loadContent = async (topic: Topic, type: "lesson" | "quiz") => {
     setLoadingContent(true);
+    setLoadError(null);
+    setSlowLoad(false);
+    const slowTimer = setTimeout(() => setSlowLoad(true), 20000);
     try {
       const { data, error } = await supabase.functions.invoke("generate-content", {
         body: {
@@ -65,15 +70,21 @@ export default function LearningScreen() {
 
       if (error) throw error;
 
-      if (type === "lesson" && data.lesson) {
+      if (type === "lesson" && data?.lesson) {
         setLessonContent(data.lesson);
-      } else if (type === "quiz" && data.quiz) {
+      } else if (type === "quiz" && Array.isArray(data?.quiz) && data.quiz.length > 0) {
         setQuizQuestions(data.quiz);
+      } else {
+        throw new Error("Invalid content received");
       }
     } catch (err: unknown) {
-      toast.error("Failed to generate content. Please try again.");
+      const msg = err instanceof Error ? err.message : "Failed to generate content";
+      setLoadError(msg);
+      toast.error("Failed to generate content. Tap retry to try again.");
     } finally {
+      clearTimeout(slowTimer);
       setLoadingContent(false);
+      setSlowLoad(false);
     }
   };
 
@@ -152,7 +163,8 @@ export default function LearningScreen() {
             const isCompleted = topic.completed;
             const isCurrent = i === skill.currentTopicIndex && !isCompleted;
             const isWeak = topic.score !== undefined && topic.score < 60;
-            const isLocked = i > skill.currentTopicIndex && !isCompleted;
+            // Soft-lock: allow access to current + completed; lock only future-untouched topics
+            const isLocked = !isCompleted && i > skill.currentTopicIndex;
 
             return (
               <motion.button
@@ -193,7 +205,7 @@ export default function LearningScreen() {
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">{topic.description}</p>
                   {isCompleted && topic.score !== undefined && (
                     <span className={`text-xs mt-1 inline-block ${topic.score >= 60 ? "text-primary" : "text-amber"}`}>
-                      Score: {topic.score}% {isWeak && "• Review recommended"}
+                      Score: {topic.score}% {isWeak ? "• Review recommended" : "• Tap to retake"}
                     </span>
                   )}
                 </div>
@@ -206,17 +218,37 @@ export default function LearningScreen() {
     );
   }
 
-  // Loading state
-  if (loadingContent && !lessonContent && mode === "lesson") {
+  // Lesson loading / error state
+  if (mode === "lesson" && !lessonContent && (loadingContent || loadError)) {
     return (
       <div className="p-4 max-w-lg mx-auto space-y-6 pt-4">
         <button onClick={backToRoadmap} className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm">
           <ArrowLeft className="w-4 h-4" /> Back to roadmap
         </button>
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground text-sm">Generating lesson for {selectedTopic?.title}...</p>
-          <p className="text-muted-foreground text-xs">This may take a few seconds</p>
+        <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
+          {loadError ? (
+            <>
+              <XCircle className="w-10 h-10 text-destructive" />
+              <p className="text-foreground font-medium">Couldn't generate lesson</p>
+              <p className="text-muted-foreground text-xs max-w-xs">{loadError}</p>
+              <Button onClick={() => selectedTopic && loadContent(selectedTopic, "lesson")} className="gradient-primary text-primary-foreground">
+                Try again
+              </Button>
+            </>
+          ) : (
+            <>
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-muted-foreground text-sm">Generating lesson for {selectedTopic?.title}...</p>
+              <p className="text-muted-foreground text-xs">
+                {slowLoad ? "This is taking longer than usual..." : "This may take a few seconds"}
+              </p>
+              {slowLoad && selectedTopic && (
+                <Button variant="outline" size="sm" onClick={() => loadContent(selectedTopic, "lesson")}>
+                  Retry
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
@@ -329,16 +361,37 @@ export default function LearningScreen() {
     );
   }
 
-  // Quiz loading
+  // Quiz loading / error
   if (mode === "quiz" && (loadingContent || quizQuestions.length === 0)) {
     return (
       <div className="p-4 max-w-lg mx-auto space-y-6 pt-4">
         <button onClick={() => setMode("lesson")} className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm">
           <ArrowLeft className="w-4 h-4" /> Back to lesson
         </button>
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground text-sm">Generating quiz questions...</p>
+        <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
+          {loadError ? (
+            <>
+              <XCircle className="w-10 h-10 text-destructive" />
+              <p className="text-foreground font-medium">Couldn't generate quiz</p>
+              <p className="text-muted-foreground text-xs max-w-xs">{loadError}</p>
+              <Button onClick={() => selectedTopic && loadContent(selectedTopic, "quiz")} className="gradient-primary text-primary-foreground">
+                Try again
+              </Button>
+            </>
+          ) : (
+            <>
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-muted-foreground text-sm">Generating quiz questions...</p>
+              {slowLoad && selectedTopic && (
+                <>
+                  <p className="text-muted-foreground text-xs">This is taking longer than usual...</p>
+                  <Button variant="outline" size="sm" onClick={() => loadContent(selectedTopic, "quiz")}>
+                    Retry
+                  </Button>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     );

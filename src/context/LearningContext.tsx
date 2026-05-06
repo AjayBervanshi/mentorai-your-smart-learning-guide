@@ -4,7 +4,6 @@ import { getTopicsForSkill } from "@/data/skillTemplates";
 import type { UserProfile, UserSkill, SkillLevel, UserGoal, DailyTime, Topic } from "@/types/learning";
 
 interface LearningContextType {
-  appState: AppState;
   profile: UserProfile | null;
   isOnboarded: boolean;
   loading: boolean;
@@ -15,8 +14,6 @@ interface LearningContextType {
   getActiveSkill: () => UserSkill | null;
   setActiveSkillId: (id: string) => void;
   activeSkillId: string | null;
-  switchUser: (userId: string | null) => void;
-  deleteUser: (userId: string) => void;
 }
 
 const LearningContext = createContext<LearningContextType | null>(null);
@@ -318,18 +315,18 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           .eq("user_id", userId);
 
         if (allTopics) {
-          const completed = allTopics.filter((t) => t.completed).length;
-          const progress = Math.round((completed / allTopics.length) * 100);
+          const completedCount = allTopics.filter((t) => t.completed).length;
+          const newProgress = Math.round((completedCount / allTopics.length) * 100);
+          const newCurrentTopicIndex = Math.min(completedCount, allTopics.length - 1);
 
           await supabase
             .from("user_skills")
             .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
             .eq("id", skillId)
-            .eq("user_id", userId),
+            .eq("user_id", userId);
 
-          // Update XP and streak
-          const today = new Date().toISOString().split("T")[0];
-          const lastActive = profile?.joinedDate ? undefined : undefined; // we need to query
+          // Update XP and streak — use UTC date consistently to avoid timezone drift
+          const todayUTC = new Date().toISOString().split("T")[0];
 
           const { data: lpData } = await supabase
             .from("user_learning_profiles")
@@ -341,9 +338,9 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             let newStreak = lpData.streak || 0;
             const lastDate = lpData.last_active_date;
 
-            if (lastDate !== today) {
+            if (lastDate !== todayUTC) {
               const yesterday = new Date();
-              yesterday.setDate(yesterday.getDate() - 1);
+              yesterday.setUTCDate(yesterday.getUTCDate() - 1);
               const yesterdayStr = yesterday.toISOString().split("T")[0];
 
               if (lastDate === yesterdayStr) {
@@ -360,7 +357,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
               .update({
                 total_xp: (lpData.total_xp || 0) + score,
                 streak: newStreak,
-                last_active_date: today,
+                last_active_date: todayUTC,
               })
               .eq("user_id", userId);
 
@@ -413,20 +410,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     if (!profile || !activeSkillId) return null;
     return profile.skills.find((s) => s.id === activeSkillId) ?? null;
   }, [profile, activeSkillId]);
-
-  const switchUser = useCallback((userId: string | null) => {
-    setAppState(prev => ({ ...prev, activeUserId: userId }));
-    if (userId) {
-      updateProfile(p => ({ ...p, lastActive: new Date().toISOString() }));
-    }
-  }, [updateProfile]);
-
-  const deleteUser = useCallback((userId: string) => {
-    setAppState(prev => ({
-      users: prev.users.filter(u => u.id !== userId),
-      activeUserId: prev.activeUserId === userId ? null : prev.activeUserId
-    }));
-  }, []);
 
   return (
     <LearningContext.Provider

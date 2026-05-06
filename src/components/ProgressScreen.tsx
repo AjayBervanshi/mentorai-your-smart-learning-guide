@@ -67,6 +67,53 @@ export default function ProgressScreen() {
         </div>
       </motion.div>
 
+      {/* Per-skill performance comparison */}
+      {profile.skills.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+          className="glass-card p-5 space-y-3"
+        >
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Performance by Skill
+          </h2>
+          <div className="space-y-3">
+            {profile.skills.map((skill) => {
+              const scored = skill.topics.filter((t) => t.score !== undefined);
+              const avg =
+                scored.length > 0
+                  ? Math.round(scored.reduce((sum, t) => sum + (t.score ?? 0), 0) / scored.length)
+                  : null;
+              return (
+                <div key={skill.id} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-foreground font-medium truncate">{skill.name}</span>
+                    <span className="text-muted-foreground">
+                      {avg === null ? "—" : `avg ${avg}%`}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-secondary/60 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        avg === null
+                          ? "bg-muted"
+                          : avg >= 80
+                          ? "bg-primary"
+                          : avg >= 60
+                          ? "bg-accent"
+                          : "bg-amber"
+                      }`}
+                      style={{ width: `${avg ?? 0}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
+
       {/* Milestones */}
       {totalTopics > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-5 space-y-3">

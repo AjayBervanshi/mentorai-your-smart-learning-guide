@@ -24,20 +24,12 @@ export interface Topic {
 }
 
 export interface UserProfile {
-  id: string;
-  name: string;
   skills: UserSkill[];
   goal: UserGoal;
   dailyTime: DailyTime;
   streak: number;
   totalXP: number;
   joinedDate: string;
-  lastActive: string;
-}
-
-export interface AppState {
-  users: UserProfile[];
-  activeUserId: string | null;
 }
 
 export interface QuizQuestion {
