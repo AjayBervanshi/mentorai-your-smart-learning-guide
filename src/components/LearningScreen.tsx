@@ -361,16 +361,37 @@ export default function LearningScreen() {
     );
   }
 
-  // Quiz loading
+  // Quiz loading / error
   if (mode === "quiz" && (loadingContent || quizQuestions.length === 0)) {
     return (
       <div className="p-4 max-w-lg mx-auto space-y-6 pt-4">
         <button onClick={() => setMode("lesson")} className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm">
           <ArrowLeft className="w-4 h-4" /> Back to lesson
         </button>
-        <div className="flex flex-col items-center justify-center py-16 space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground text-sm">Generating quiz questions...</p>
+        <div className="flex flex-col items-center justify-center py-16 space-y-4 text-center">
+          {loadError ? (
+            <>
+              <XCircle className="w-10 h-10 text-destructive" />
+              <p className="text-foreground font-medium">Couldn't generate quiz</p>
+              <p className="text-muted-foreground text-xs max-w-xs">{loadError}</p>
+              <Button onClick={() => selectedTopic && loadContent(selectedTopic, "quiz")} className="gradient-primary text-primary-foreground">
+                Try again
+              </Button>
+            </>
+          ) : (
+            <>
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="text-muted-foreground text-sm">Generating quiz questions...</p>
+              {slowLoad && selectedTopic && (
+                <>
+                  <p className="text-muted-foreground text-xs">This is taking longer than usual...</p>
+                  <Button variant="outline" size="sm" onClick={() => loadContent(selectedTopic, "quiz")}>
+                    Retry
+                  </Button>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
