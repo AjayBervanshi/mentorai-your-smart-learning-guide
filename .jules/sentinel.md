@@ -23,3 +23,8 @@
 **Vulnerability:** The `generate-content` Supabase Edge Function lacked authentication checks. Supabase Edge Functions do not automatically enforce authentication by default when using anonymous keys or service role keys directly. This allowed any external entity to call the endpoint, exhaust AI credits, and fill the cache database, as long as they sent requests to the endpoint URL.
 **Learning:** Supabase Edge Functions require manual token verification. Developers must extract the `Authorization` header from the incoming request and use `supabaseClient.auth.getUser()` to verify the token explicitly.
 **Prevention:** Always implement explicit authentication header extraction and token validation at the beginning of sensitive Edge Functions before performing any business logic or external API calls.
+
+## 2026-05-07 - Overly Permissive CORS Configuration in Edge Functions
+**Vulnerability:** Supabase Edge Functions had `Access-Control-Allow-Origin` hardcoded to `*`, allowing any domain to send cross-origin requests to the API.
+**Learning:** Overly permissive CORS headers can allow unauthorized domains to interact with sensitive endpoints if authentication checks are weak or rely on cookies. Even with token-based auth, it violates the principle of least privilege.
+**Prevention:** Use an environment variable (e.g., `ALLOWED_ORIGIN`) to dynamically set the allowed origin, allowing strict configurations in production while maintaining development flexibility.
