@@ -137,32 +137,76 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
         const userSkills: UserSkill[] = [];
 
-        for (const s of skills) {
-          const { data: skillData, error: skillError } = await supabase
-            .from("user_skills")
-            .insert({ user_id: userId, name: s.name, level: s.level })
-            .select()
-            .single();
-          if (skillError) throw skillError;
+        // ⚡ Bolt: Added guard clause to prevent 400 Bad Request on empty skills array
+        if (skills.length === 0) {
+          setProfile({
+            skills: userSkills,
+            goal,
+            dailyTime,
+            streak: 0,
+            totalXP: 0,
+            joinedDate: new Date().toISOString(),
+          });
+          setActiveSkillId(null);
+          return;
+        }
 
+        // ⚡ Bolt: Replaced O(N) sequential inserts with bulk O(1) inserts to eliminate network waterfalls.
+        // Impact: Reduces onboarding save latency from O(2N) to exactly 2 roundtrips.
+        const skillInserts = skills.map((s) => ({
+          user_id: userId,
+          name: s.name,
+          level: s.level,
+        }));
+
+        const { data: skillsData, error: skillsError } = await supabase
+          .from("user_skills")
+          .insert(skillInserts)
+          .select();
+
+        if (skillsError) throw skillsError;
+
+        const allTopicInserts = [];
+        const skillTopicCounts = [];
+
+        for (let j = 0; j < skills.length; j++) {
+          const s = skills[j];
+          const skillId = skillsData[j].id;
           const topicTemplates = getTopicsForSkill(s.name, s.level);
-          const topicInserts = topicTemplates.map((t, i) => ({
-            skill_id: skillData.id,
-            user_id: userId,
-            title: t.title,
-            description: t.description,
-            level: t.level,
-            sort_order: i,
-            subtopics: t.subtopics,
-          }));
 
-          const { data: topicData, error: topicError } = await supabase
-            .from("user_topics")
-            .insert(topicInserts)
-            .select();
-          if (topicError) throw topicError;
+          skillTopicCounts.push(topicTemplates.length);
 
-          const topics: Topic[] = (topicData || []).map((t) => ({
+          for (let i = 0; i < topicTemplates.length; i++) {
+            const t = topicTemplates[i];
+            allTopicInserts.push({
+              skill_id: skillId,
+              user_id: userId,
+              title: t.title,
+              description: t.description,
+              level: t.level,
+              sort_order: i,
+              subtopics: t.subtopics,
+            });
+          }
+        }
+
+        const { data: allTopicData, error: topicError } = await supabase
+          .from("user_topics")
+          .insert(allTopicInserts)
+          .select();
+
+        if (topicError) throw topicError;
+
+        let topicOffset = 0;
+        for (let j = 0; j < skills.length; j++) {
+          const s = skills[j];
+          const skillId = skillsData[j].id;
+          const count = skillTopicCounts[j];
+
+          const topicData = allTopicData ? allTopicData.slice(topicOffset, topicOffset + count) : [];
+          topicOffset += count;
+
+          const topics: Topic[] = topicData.map((t) => ({
             id: t.id,
             title: t.title,
             description: t.description || "",
@@ -172,7 +216,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           }));
 
           userSkills.push({
-            id: skillData.id,
+            id: skillId,
             name: s.name,
             level: s.level,
             progress: 0,
