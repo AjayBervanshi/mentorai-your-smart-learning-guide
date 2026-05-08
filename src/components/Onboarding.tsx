@@ -119,6 +119,7 @@ export default function Onboarding() {
                 </div>
                 <div className="space-y-3">
                   <Input
+                    aria-label="Your name"
                     placeholder="e.g. Alex"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
@@ -228,6 +229,7 @@ export default function Onboarding() {
                               updated[idx] = { ...updated[idx], level: l };
                               setSkills(updated);
                             }}
+                            aria-pressed={s.level === l}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize flex-1 ${
                               s.level === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                             }`}
