@@ -228,6 +228,7 @@ export default function Onboarding() {
                               updated[idx] = { ...updated[idx], level: l };
                               setSkills(updated);
                             }}
+                            aria-pressed={s.level === l}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize flex-1 ${
                               s.level === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                             }`}
@@ -297,6 +298,7 @@ export default function Onboarding() {
                     <button
                       key={t.value}
                       onClick={() => setDailyTime(t.value)}
+                      aria-pressed={dailyTime === t.value}
                       className={`w-full glass-card p-4 flex items-center gap-4 text-left transition-all ${
                         dailyTime === t.value ? "ring-2 ring-primary glow-primary" : "hover:bg-secondary/50"
                       }`}
