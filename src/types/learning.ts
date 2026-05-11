@@ -30,6 +30,7 @@ export interface UserProfile {
   streak: number;
   totalXP: number;
   joinedDate: string;
+  lastActiveDate?: string;
 }
 
 export interface QuizQuestion {
