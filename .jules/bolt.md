@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2026-05-07 - [Deriving Local States & Batching Queries]
+**Learning:** Making independent sequential Supabase `.update()` requests and redundant `.select()` queries inside event handlers causes noticeable network waterfalls. Using an effect-synchronized `useRef` to safely derive local state without triggering dependency re-renders allows us to batch database updates and avoid unnecessary reads while maintaining UI consistency.
+**Action:** Use an effect-synchronized `useRef` to maintain access to rapidly changing global states (like user profiles) in `useCallback`s without expanding the dependency array. Derive dependent database updates locally and send them via `Promise.all()`.
