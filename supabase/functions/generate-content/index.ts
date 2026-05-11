@@ -43,6 +43,27 @@ serve(async (req) => {
       });
     }
 
+    // Security: Validate inputs to prevent prompt injection and DoS
+    const allowedContentTypes = ["lesson", "quiz", "interview"];
+    if (!allowedContentTypes.includes(contentType)) {
+      return new Response(JSON.stringify({ error: "Invalid contentType" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (typeof skill !== "string" || skill.length > 100 ||
+        typeof topic !== "string" || topic.length > 200) {
+      return new Response(JSON.stringify({ error: "Input lengths exceed limits" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (subtopics && (!Array.isArray(subtopics) || subtopics.length > 20 || subtopics.some((s: unknown) => typeof s !== "string" || (s as string).length > 200))) {
+      return new Response(JSON.stringify({ error: "Invalid subtopics format or length" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Check cache first
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
