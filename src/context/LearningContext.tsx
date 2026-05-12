@@ -137,50 +137,75 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
         const userSkills: UserSkill[] = [];
 
-        for (const s of skills) {
-          const { data: skillData, error: skillError } = await supabase
+        if (skills.length > 0) {
+          // ⚡ Bolt: Bulk insert skills to avoid N+1 queries
+          const { data: skillsData, error: skillsError } = await supabase
             .from("user_skills")
-            .insert({ user_id: userId, name: s.name, level: s.level })
-            .select()
-            .single();
-          if (skillError) throw skillError;
-
-          const topicTemplates = getTopicsForSkill(s.name, s.level);
-          const topicInserts = topicTemplates.map((t, i) => ({
-            skill_id: skillData.id,
-            user_id: userId,
-            title: t.title,
-            description: t.description,
-            level: t.level,
-            sort_order: i,
-            subtopics: t.subtopics,
-          }));
-
-          const { data: topicData, error: topicError } = await supabase
-            .from("user_topics")
-            .insert(topicInserts)
+            .insert(skills.map((s) => ({ user_id: userId, name: s.name, level: s.level })))
             .select();
-          if (topicError) throw topicError;
+          if (skillsError) throw skillsError;
 
-          const topics: Topic[] = (topicData || []).map((t) => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || "",
-            level: t.level as SkillLevel,
-            completed: false,
-            subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
-          }));
+          const allTopicInserts = [];
+          const topicsCountPerSkill: number[] = [];
 
-          userSkills.push({
-            id: skillData.id,
-            name: s.name,
-            level: s.level,
-            progress: 0,
-            currentTopicIndex: 0,
-            weakTopics: [],
-            completedTopics: [],
-            topics,
-          });
+          for (let i = 0; i < skillsData.length; i++) {
+            const skillData = skillsData[i];
+            const s = skills[i];
+            const topicTemplates = getTopicsForSkill(s.name, s.level);
+            topicsCountPerSkill.push(topicTemplates.length);
+
+            allTopicInserts.push(
+              ...topicTemplates.map((t, j) => ({
+                skill_id: skillData.id,
+                user_id: userId,
+                title: t.title,
+                description: t.description,
+                level: t.level,
+                sort_order: j,
+                subtopics: t.subtopics,
+              }))
+            );
+          }
+
+          let topicData: { id: string; title: string; description: string | null; level: string; subtopics: string[] | null }[] = [];
+          if (allTopicInserts.length > 0) {
+            // ⚡ Bolt: Bulk insert all topics for all skills in one request
+            const { data, error: topicError } = await supabase
+              .from("user_topics")
+              .insert(allTopicInserts)
+              .select();
+            if (topicError) throw topicError;
+            topicData = data || [];
+          }
+
+          let topicOffset = 0;
+          for (let i = 0; i < skillsData.length; i++) {
+            const skillData = skillsData[i];
+            const s = skills[i];
+            const count = topicsCountPerSkill[i];
+            const skillTopics = topicData.slice(topicOffset, topicOffset + count);
+            topicOffset += count;
+
+            const topics: Topic[] = skillTopics.map((t) => ({
+              id: t.id,
+              title: t.title,
+              description: t.description || "",
+              level: t.level as SkillLevel,
+              completed: false,
+              subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+            }));
+
+            userSkills.push({
+              id: skillData.id,
+              name: s.name,
+              level: s.level,
+              progress: 0,
+              currentTopicIndex: 0,
+              weakTopics: [],
+              completedTopics: [],
+              topics,
+            });
+          }
         }
 
         setProfile({
