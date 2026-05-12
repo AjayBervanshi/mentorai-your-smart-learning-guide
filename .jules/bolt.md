@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2026-05-07 - [Optimize Relational Database Inserts]
+**Learning:** Performing database inserts in a loop (e.g., `user_skills` and `user_topics` within `completeOnboarding`) causes an N+1 query waterfall, severely degrading performance.
+**Action:** Perform a bulk insert of parent records with `.select()` to retrieve generated IDs, then map and bulk insert child records in a single secondary operation, relying on array index mapping to prevent O(N^2) complexity and minimize network roundtrips.
