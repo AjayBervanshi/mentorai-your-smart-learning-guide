@@ -260,6 +260,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   <button
                     key={l}
                     onClick={() => setNewLevel(l)}
+                    aria-pressed={newLevel === l}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${
                       newLevel === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                     }`}
