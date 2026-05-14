@@ -23,3 +23,13 @@
 **Vulnerability:** The `generate-content` Supabase Edge Function lacked authentication checks. Supabase Edge Functions do not automatically enforce authentication by default when using anonymous keys or service role keys directly. This allowed any external entity to call the endpoint, exhaust AI credits, and fill the cache database, as long as they sent requests to the endpoint URL.
 **Learning:** Supabase Edge Functions require manual token verification. Developers must extract the `Authorization` header from the incoming request and use `supabaseClient.auth.getUser()` to verify the token explicitly.
 **Prevention:** Always implement explicit authentication header extraction and token validation at the beginning of sensitive Edge Functions before performing any business logic or external API calls.
+
+## 2026-05-07 - Missing Input Length and Allowlist Validation for AI Prompts
+**Vulnerability:** The `generate-content` Edge Function lacked strict allowlist validation for `contentType` and length limits for `skill`, `topic`, and `subtopics`. This could allow attackers to inject massive strings or unexpected content types, leading to prompt injection, excessive AI API token usage, or denial-of-service.
+**Learning:** Endpoints that pass user input directly into AI prompts must strictly validate the shape, type, length, and allowed values of that input before processing, as the backend AI APIs are sensitive to large payloads and prompt injection attacks.
+**Prevention:** Always enforce explicit length limits (e.g., `skill.length > 100`) and validate inputs against strict allowlists (e.g., `["lesson", "quiz", "interview"]`) for any data destined for AI prompt generation.
+
+## 2026-05-07 - Overly Permissive CORS in Edge Functions
+**Vulnerability:** The Supabase Edge Function `generate-content` had a hardcoded `Access-Control-Allow-Origin: *` header. This overly permissive CORS configuration allowed any website to make requests to the function.
+**Learning:** Hardcoding wildcard CORS origins in Edge Functions exposes the endpoints to cross-origin abuse, circumventing browser security policies intended to protect authenticated sessions and prevent unauthorized access.
+**Prevention:** Parameterize the `Access-Control-Allow-Origin` header using an environment variable (e.g., `Deno.env.get("ALLOWED_ORIGIN") || "*"`) to restrict origins in production while permitting development fallback.
