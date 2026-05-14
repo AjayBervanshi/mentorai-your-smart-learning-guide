@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getTopicsForSkill } from "@/data/skillTemplates";
 import type { UserProfile, UserSkill, SkillLevel, UserGoal, DailyTime, Topic } from "@/types/learning";
@@ -202,7 +202,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
 
   const addSkill = useCallback(
     async (name: string, level: SkillLevel) => {
-      if (!userId || !profile) return;
+      if (!userId) return;
 
       try {
         const { data: skillData, error: skillError } = await supabase
@@ -259,12 +259,12 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         throw err;
       }
     },
-    [userId, profile]
+    [userId]
   );
 
   const removeSkill = useCallback(
     async (skillId: string) => {
-      if (!userId || !profile) return;
+      if (!userId) return;
 
       try {
         await supabase
@@ -285,21 +285,31 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           return { ...prev, skills };
         });
 
-        if (activeSkillId === skillId) {
-          const remaining = profile.skills.filter((s) => s.id !== skillId);
-          setActiveSkillId(remaining[0]?.id ?? null);
-        }
+        setActiveSkillId((prevId) => {
+          if (prevId === skillId) {
+            let nextId = null;
+            setProfile((prevProfile) => {
+              if (prevProfile) {
+                const remaining = prevProfile.skills.filter((s) => s.id !== skillId);
+                nextId = remaining[0]?.id ?? null;
+              }
+              return prevProfile;
+            });
+            return nextId;
+          }
+          return prevId;
+        });
       } catch (err) {
         console.error("Failed to remove skill:", err);
         throw err;
       }
     },
-    [userId, profile, activeSkillId]
+    [userId]
   );
 
   const updateSkillProgress = useCallback(
     async (skillId: string, topicId: string, score: number) => {
-      if (!userId || !profile) return;
+      if (!userId) return;
 
       try {
         await supabase
@@ -411,10 +421,31 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
     return profile.skills.find((s) => s.id === activeSkillId) ?? null;
   }, [profile, activeSkillId]);
 
+  const contextValue = useMemo(() => ({
+    profile,
+    isOnboarded: !!profile,
+    loading,
+    completeOnboarding,
+    updateSkillProgress,
+    addSkill,
+    removeSkill,
+    getActiveSkill,
+    setActiveSkillId,
+    activeSkillId
+  }), [
+    profile,
+    loading,
+    completeOnboarding,
+    updateSkillProgress,
+    addSkill,
+    removeSkill,
+    getActiveSkill,
+    setActiveSkillId,
+    activeSkillId
+  ]);
+
   return (
-    <LearningContext.Provider
-      value={{ profile, isOnboarded: !!profile, loading, completeOnboarding, updateSkillProgress, addSkill, removeSkill, getActiveSkill, setActiveSkillId, activeSkillId }}
-    >
+    <LearningContext.Provider value={contextValue}>
       {children}
     </LearningContext.Provider>
   );
