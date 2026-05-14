@@ -11,3 +11,7 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+
+## 2026-05-07 - Memoize Context Provider Values
+**Learning:** Inline objects passed to Context Providers cause all consumers to re-render when the Provider's component re-renders, even if the state inside the value object hasn't changed.
+**Action:** Always wrap context values in `useMemo` and rely on local state derivation to remove frequently changing global objects (like `profile`) from `useCallback` dependency arrays.
