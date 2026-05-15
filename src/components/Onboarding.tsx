@@ -228,6 +228,7 @@ export default function Onboarding() {
                               updated[idx] = { ...updated[idx], level: l };
                               setSkills(updated);
                             }}
+                            aria-pressed={s.level === l}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize flex-1 ${
                               s.level === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                             }`}
@@ -288,7 +289,7 @@ export default function Onboarding() {
                   <h1 className="text-3xl font-bold text-foreground">How much time per day?</h1>
                   <p className="text-muted-foreground">Even 15 minutes daily adds up. Consistency beats intensity.</p>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-3" role="group" aria-label="Daily time commitment">
                   {([
                     { value: 15 as DailyTime, label: "15 minutes", desc: "Quick daily sessions — perfect for busy schedules" },
                     { value: 30 as DailyTime, label: "30 minutes", desc: "Recommended — steady, sustainable progress" },
@@ -297,6 +298,7 @@ export default function Onboarding() {
                     <button
                       key={t.value}
                       onClick={() => setDailyTime(t.value)}
+                      aria-pressed={dailyTime === t.value}
                       className={`w-full glass-card p-4 flex items-center gap-4 text-left transition-all ${
                         dailyTime === t.value ? "ring-2 ring-primary glow-primary" : "hover:bg-secondary/50"
                       }`}
