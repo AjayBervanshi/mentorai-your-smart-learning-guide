@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2026-05-07 - Memoizing derived state in components with input fields
+**Learning:** Placing frequently changing state (like search/add inputs) in the same component as expensive derived state computations without memoization causes O(N*M) recalculations on every keystroke. In `Dashboard.tsx`, aggregating topics and progress across all skills was running unnecessarily whenever the user typed in the "Add Skill" field.
+**Action:** Always wrap complex derivations (loops, aggregations) in `useMemo` when the component also handles rapid local state updates (like text inputs), or split the input into a separate component.
