@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2026-05-07 - [Memoizing Expensive Derivations with Early Returns]
+**Learning:** When introducing `useMemo` into components with existing early returns (e.g., `if (!profile) return null;`), the hook must be placed before the return to satisfy the Rules of Hooks. This also means we must handle nullable states internally and use utility types like `NonNullable<T>` to accurately type derived variables.
+**Action:** Always place hooks before early returns, handle the null/undefined state inside the hook's callback, and use `NonNullable<T>` to maintain strong typing for derived states.
