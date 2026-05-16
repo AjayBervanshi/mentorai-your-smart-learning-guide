@@ -170,14 +170,14 @@ export default function Onboarding() {
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2" role="group" aria-label="Skill level">
                   <span className="text-xs text-muted-foreground self-center mr-1">Level:</span>
                   {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
                     <button
                       key={l}
                       onClick={() => setCurrentLevel(l)}
                       aria-pressed={currentLevel === l}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
                         currentLevel === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -228,7 +228,8 @@ export default function Onboarding() {
                               updated[idx] = { ...updated[idx], level: l };
                               setSkills(updated);
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize flex-1 ${
+                            aria-pressed={s.level === l}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize flex-1 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
                               s.level === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                             }`}
                           >

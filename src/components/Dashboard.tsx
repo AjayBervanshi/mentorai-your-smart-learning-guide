@@ -255,12 +255,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2" role="group" aria-label="Skill level">
                 {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
                   <button
                     key={l}
                     onClick={() => setNewLevel(l)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${
+                    aria-pressed={newLevel === l}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
                       newLevel === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -308,9 +309,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                       aria-label="Delete skill"
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeSkill(skill.id).then(() => toast.success(`${skill.name} removed`)).catch(() => toast.error("Failed to remove skill"));
+                        if (window.confirm(`Are you sure you want to delete ${skill.name}? This will remove all your progress.`)) {
+                          removeSkill(skill.id).then(() => toast.success(`${skill.name} removed`)).catch(() => toast.error("Failed to remove skill"));
+                        }
                       }}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100"
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:outline-none"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
