@@ -11,3 +11,7 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+
+## 2026-05-07 - [Optimize Supabase Database Operations During Onboarding]
+**Learning:** Performing database inserts within loops (such as mapping array elements and calling `supabase.from(...).insert(...)` inside a `for` loop) causes consecutive network waterfalls. During the onboarding step, inserting N skills followed by multiple sets of topics created O(N) network requests.
+**Action:** Always batch related database inserts by using the `insert([])` bulk operation. Collect the rows to be inserted into arrays first, execute a single batch `.insert()`, and properly track order or IDs for relational dependencies.

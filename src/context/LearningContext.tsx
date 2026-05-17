@@ -135,52 +135,84 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         });
         if (lpError) throw lpError;
 
+        if (skills.length === 0) return;
+
+        // ⚡ Bolt: Optimized database operations by replacing sequential loops with bulk inserts,
+        // reducing network roundtrips from O(N) to O(1) during onboarding.
+        const { data: skillsData, error: skillsError } = await supabase
+          .from("user_skills")
+          .insert(skills.map(s => ({ user_id: userId, name: s.name, level: s.level })))
+          .select();
+        if (skillsError) throw skillsError;
+
+        const allTopicInserts: { skill_id: string; user_id: string; title: string; description: string; level: string; sort_order: number; subtopics: string[]; }[] = [];
         const userSkills: UserSkill[] = [];
+        const topicsCountPerSkill: number[] = [];
 
-        for (const s of skills) {
-          const { data: skillData, error: skillError } = await supabase
-            .from("user_skills")
-            .insert({ user_id: userId, name: s.name, level: s.level })
-            .select()
-            .single();
-          if (skillError) throw skillError;
-
+        for (let i = 0; i < skills.length; i++) {
+          const s = skills[i];
+          const skillData = skillsData[i];
           const topicTemplates = getTopicsForSkill(s.name, s.level);
-          const topicInserts = topicTemplates.map((t, i) => ({
+
+          const topicInserts = topicTemplates.map((t, index) => ({
             skill_id: skillData.id,
             user_id: userId,
             title: t.title,
             description: t.description,
             level: t.level,
-            sort_order: i,
+            sort_order: index,
             subtopics: t.subtopics,
           }));
 
-          const { data: topicData, error: topicError } = await supabase
-            .from("user_topics")
-            .insert(topicInserts)
-            .select();
-          if (topicError) throw topicError;
-
-          const topics: Topic[] = (topicData || []).map((t) => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || "",
-            level: t.level as SkillLevel,
-            completed: false,
-            subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
-          }));
+          allTopicInserts.push(...topicInserts);
+          topicsCountPerSkill.push(topicInserts.length);
 
           userSkills.push({
             id: skillData.id,
             name: s.name,
-            level: s.level,
+            level: s.level as SkillLevel,
             progress: 0,
             currentTopicIndex: 0,
             weakTopics: [],
             completedTopics: [],
-            topics,
+            topics: [],
           });
+        }
+
+        let topicsData: {
+          id: string;
+          title: string;
+          description: string | null;
+          level: string;
+          completed: boolean | null;
+          score: number | null;
+          subtopics: string[] | null;
+        }[] = [];
+        if (allTopicInserts.length > 0) {
+          const { data, error: topicsError } = await supabase
+            .from("user_topics")
+            .insert(allTopicInserts)
+            .select();
+          if (topicsError) throw topicsError;
+          topicsData = data || [];
+        }
+
+        let currentDataIndex = 0;
+        for (let i = 0; i < skills.length; i++) {
+          const count = topicsCountPerSkill[i];
+          for (let j = 0; j < count; j++) {
+            const t = topicsData[currentDataIndex++];
+            if (t) {
+              userSkills[i].topics.push({
+                id: t.id,
+                title: t.title,
+                description: t.description || "",
+                level: t.level as SkillLevel,
+                completed: false,
+                subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+              });
+            }
+          }
         }
 
         setProfile({
