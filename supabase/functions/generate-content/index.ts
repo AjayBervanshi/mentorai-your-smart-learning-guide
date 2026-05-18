@@ -37,11 +37,24 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const { skill, topic, subtopics, contentType = "lesson" } = await req.json();
-    if (!skill || !topic) {
-      return new Response(JSON.stringify({ error: "skill and topic are required" }), {
+
+    // Security Fix: Enforce length limits and allowlists to prevent prompt injection and DoS
+    if (!skill || typeof skill !== "string" || skill.length > 100 ||
+        !topic || typeof topic !== "string" || topic.length > 200) {
+      return new Response(JSON.stringify({ error: "Invalid skill or topic" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    if (!["lesson", "quiz", "interview"].includes(contentType)) {
+      return new Response(JSON.stringify({ error: "Invalid content type" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const safeSubtopics = Array.isArray(subtopics)
+      ? subtopics.filter((s: unknown) => typeof s === "string").map((s: string) => s.substring(0, 100)).slice(0, 10)
+      : [];
 
     // Check cache first
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -70,7 +83,7 @@ serve(async (req) => {
     if (contentType === "lesson") {
       systemPrompt = `You are an expert educator creating comprehensive learning content. Return valid JSON only, no markdown wrapping.`;
       userPrompt = `Create a detailed lesson for the topic "${topic}" in "${skill}". 
-Subtopics to cover: ${(subtopics || []).join(", ")}.
+Subtopics to cover: ${safeSubtopics.join(", ")}.
 
 Return JSON with this exact structure:
 {
@@ -92,7 +105,7 @@ Return JSON with this exact structure:
     } else if (contentType === "quiz") {
       systemPrompt = `You are an expert quiz creator for educational content. Return valid JSON only, no markdown wrapping.`;
       userPrompt = `Create 5 quiz questions for the topic "${topic}" in "${skill}".
-Subtopics: ${(subtopics || []).join(", ")}.
+Subtopics: ${safeSubtopics.join(", ")}.
 
 Return JSON array with this exact structure:
 [
