@@ -249,13 +249,31 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// ⚡ Bolt: Use module-level typed arrays to eliminate memory allocations in the hot path.
+// This significantly reduces GC pressure since this runs on every keystroke.
+let LEVENSHTEIN_PREV_ROW = new Int32Array(256);
+let LEVENSHTEIN_CURR_ROW = new Int32Array(256);
+
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    const temp = a;
+    a = b;
+    b = temp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  if (n >= LEVENSHTEIN_PREV_ROW.length) {
+    LEVENSHTEIN_PREV_ROW = new Int32Array(n + 1);
+    LEVENSHTEIN_CURR_ROW = new Int32Array(n + 1);
+  }
+
+  let prevRow = LEVENSHTEIN_PREV_ROW;
+  let currRow = LEVENSHTEIN_CURR_ROW;
+
+  for (let i = 0; i <= n; i++) {
+    prevRow[i] = i;
+  }
 
   for (let i = 1; i <= m; i++) {
     currRow[0] = i;
@@ -267,7 +285,9 @@ function levenshtein(a: string, b: string): number {
         prevRow[j - 1] + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    const tempRow = prevRow;
+    prevRow = currRow;
+    currRow = tempRow;
   }
   return prevRow[n];
 }
