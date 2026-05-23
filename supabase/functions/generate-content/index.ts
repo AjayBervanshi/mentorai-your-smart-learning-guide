@@ -43,6 +43,17 @@ serve(async (req) => {
       });
     }
 
+    if (
+      typeof skill !== "string" || skill.length > 100 ||
+      typeof topic !== "string" || topic.length > 150 ||
+      (subtopics && (!Array.isArray(subtopics) || subtopics.length > 20 || subtopics.some((s: unknown) => typeof s !== "string" || s.length > 150))) ||
+      !["lesson", "quiz", "interview"].includes(contentType)
+    ) {
+      return new Response(JSON.stringify({ error: "Invalid input parameters" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Check cache first
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
