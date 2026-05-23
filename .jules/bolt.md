@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2026-05-07 - Memoize Expensive Array Computations in Components with Rapid Local State
+**Learning:** Components containing both rapid local state updates (like text inputs for "Add Skill") and expensive array derivations (like looping over all skills and topics) can suffer from performance degradation, as the expensive O(N*M) loop re-runs on every keystroke. Using hooks like `useMemo` below an early return breaks React's Rules of Hooks.
+**Action:** When introducing `useMemo` to optimize derived state, carefully ensure it is placed *before* any early returns. Handle the potentially null or undefined state internally within the hook (e.g. by returning default fallback values) to satisfy the Rules of Hooks and prevent runtime crashes.
