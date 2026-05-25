@@ -249,27 +249,44 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+let prevRowT = new Int32Array(50);
+let currRowT = new Int32Array(50);
+
+// ⚡ Bolt: Reusing Int32Array buffers for Levenshtein dynamic programming table
+// avoids heavy object allocation/GC overhead when computing distances on every keystroke.
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    const temp = a;
+    a = b;
+    b = temp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  if (n >= prevRowT.length) {
+    prevRowT = new Int32Array(n + 1);
+    currRowT = new Int32Array(n + 1);
+  }
+
+  for (let i = 0; i <= n; i++) {
+    prevRowT[i] = i;
+  }
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    currRowT[0] = i;
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      currRowT[j] = Math.min(
+        currRowT[j - 1] + 1,
+        prevRowT[j] + 1,
+        prevRowT[j - 1] + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    const tempRow = prevRowT;
+    prevRowT = currRowT;
+    currRowT = tempRow;
   }
-  return prevRow[n];
+  return prevRowT[n];
 }
 
 /**
