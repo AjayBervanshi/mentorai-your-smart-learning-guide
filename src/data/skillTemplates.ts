@@ -249,13 +249,29 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// ⚡ Bolt: Optimize levenshtein distance by reusing Int32Array buffers and avoiding array destructuring allocations.
+const MAX_LEVENSHTEIN_LEN = 128;
+const levenshteinPrevRow = new Int32Array(MAX_LEVENSHTEIN_LEN);
+const levenshteinCurrRow = new Int32Array(MAX_LEVENSHTEIN_LEN);
+
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    const temp = a;
+    a = b;
+    b = temp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  let prevRow = levenshteinPrevRow;
+  let currRow = levenshteinCurrRow;
+
+  if (n + 1 > prevRow.length) {
+    prevRow = new Int32Array(n + 1);
+    currRow = new Int32Array(n + 1);
+  }
+
+  for (let i = 0; i <= n; i++) prevRow[i] = i;
 
   for (let i = 1; i <= m; i++) {
     currRow[0] = i;
@@ -267,7 +283,9 @@ function levenshtein(a: string, b: string): number {
         prevRow[j - 1] + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    const tempRow = prevRow;
+    prevRow = currRow;
+    currRow = tempRow;
   }
   return prevRow[n];
 }
