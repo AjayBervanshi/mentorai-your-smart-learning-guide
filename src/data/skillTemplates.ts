@@ -249,27 +249,48 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+const MAX_LEN = 100;
+let prevRowArr = new Int32Array(MAX_LEN + 1);
+let currRowArr = new Int32Array(MAX_LEN + 1);
+
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    const temp = a;
+    a = b;
+    b = temp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  // ⚡ Bolt: Use module-level Int32Arrays for the levenshtein distance rows
+  // instead of allocating new JavaScript arrays on every call.
+  // This drastically reduces GC pressure since this is called frequently
+  // (e.g. on every keystroke when filtering skills).
+  if (n > prevRowArr.length - 1) {
+    prevRowArr = new Int32Array(n + 1);
+    currRowArr = new Int32Array(n + 1);
+  }
+
+  for (let i = 0; i <= n; i++) prevRowArr[i] = i;
+
+  let prev = prevRowArr;
+  let curr = currRowArr;
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    curr[0] = i;
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      curr[j] = Math.min(
+        curr[j - 1] + 1,
+        prev[j] + 1,
+        prev[j - 1] + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    const tempArr = prev;
+    prev = curr;
+    curr = tempArr;
   }
-  return prevRow[n];
+  return prev[n];
 }
 
 /**
