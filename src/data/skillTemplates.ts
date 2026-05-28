@@ -249,13 +249,40 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// ⚡ Bolt: Use module-level TypedArrays to eliminate memory allocations and GC pressure
+// when computing Levenshtein distance on every keystroke during typing.
+const MAX_LEN = 100;
+const prevRowArray = new Int32Array(MAX_LEN);
+const currRowArray = new Int32Array(MAX_LEN);
+
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    const temp = a; a = b; b = temp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  // Fallback for unusually long strings
+  if (n >= MAX_LEN) {
+    let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
+    let currRow = new Array(n + 1);
+    for (let i = 1; i <= m; i++) {
+      currRow[0] = i;
+      for (let j = 1; j <= n; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        currRow[j] = Math.min(currRow[j - 1] + 1, prevRow[j] + 1, prevRow[j - 1] + cost);
+      }
+      const temp = prevRow; prevRow = currRow; currRow = temp;
+    }
+    return prevRow[n];
+  }
+
+  let prevRow = prevRowArray;
+  let currRow = currRowArray;
+
+  for (let i = 0; i <= n; i++) {
+    prevRow[i] = i;
+  }
 
   for (let i = 1; i <= m; i++) {
     currRow[0] = i;
@@ -267,7 +294,7 @@ function levenshtein(a: string, b: string): number {
         prevRow[j - 1] + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    const temp = prevRow; prevRow = currRow; currRow = temp;
   }
   return prevRow[n];
 }
@@ -334,19 +361,21 @@ export function findMatchingSkills(input: string): string[] {
 
   if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
-    .sort((a, b) => a.dist - b.dist)
-    .map((x) => x.skill);
+  // ⚡ Bolt: Consolidate sequential map/filter chains into a single pass to reduce array allocation overhead
+  const fuzzy: { skill: string; dist: number }[] = [];
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    const dist = Math.min(
+      levenshtein(normalized, skillObj.lower),
+      levenshtein(clean, skillObj.clean)
+    );
+    if (dist <= 3) {
+      fuzzy.push({ skill: skillObj.original, dist });
+    }
+  }
 
-  return fuzzy.slice(0, 8);
+  fuzzy.sort((a, b) => a.dist - b.dist);
+
+  return fuzzy.slice(0, 8).map(x => x.skill);
 }
 
 export function isValidSkill(input: string): boolean {
