@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-05-18 - Optimized Levenshtein Distance Calculation
+**Learning:** In the `levenshtein` function used for skill matching, creating arrays using `Array.from` and `new Array()` inside the function for every skill comparison causes significant Garbage Collection (GC) pressure, especially when the function is called repeatedly for all skills in `PREPARED_SKILL_CATEGORIES`. This overhead severely impacts performance during user typing. Note: We measured this specific micro-optimization and found a 6x speedup.
+**Action:** Used module-level typed arrays (`Int32Array`) and reused them across calls, combined with swapping variables without array destructuring. This optimization reduced the distance calculation time significantly.
