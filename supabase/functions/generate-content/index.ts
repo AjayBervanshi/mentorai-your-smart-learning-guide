@@ -43,6 +43,13 @@ serve(async (req) => {
       });
     }
 
+    const allowedContentTypes = ["lesson", "quiz", "interview"];
+    if (!allowedContentTypes.includes(contentType)) {
+      return new Response(JSON.stringify({ error: "Invalid content type" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Check cache first
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
