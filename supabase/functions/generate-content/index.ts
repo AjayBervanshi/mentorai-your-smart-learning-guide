@@ -37,8 +37,23 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const { skill, topic, subtopics, contentType = "lesson" } = await req.json();
-    if (!skill || !topic) {
-      return new Response(JSON.stringify({ error: "skill and topic are required" }), {
+
+    // Validate inputs to prevent prompt injection and DoS
+    if (!skill || typeof skill !== "string" || skill.length > 100 || !topic || typeof topic !== "string" || topic.length > 100) {
+      return new Response(JSON.stringify({ error: "Invalid skill or topic" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const validContentTypes = ["lesson", "quiz", "interview"];
+    if (!validContentTypes.includes(contentType)) {
+      return new Response(JSON.stringify({ error: "Invalid contentType" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (subtopics && (!Array.isArray(subtopics) || subtopics.length > 20 || subtopics.some((st: unknown) => typeof st !== "string" || st.length > 100))) {
+      return new Response(JSON.stringify({ error: "Invalid subtopics" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
