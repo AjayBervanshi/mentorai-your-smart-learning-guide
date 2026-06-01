@@ -249,13 +249,29 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// ⚡ Bolt: Reuse module-level Int32Arrays to prevent memory allocation and GC pressure on every keystroke
+let prevRow = new Int32Array(64);
+let currRow = new Int32Array(64);
+
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    // ⚡ Bolt: Avoid array destructuring to prevent object allocation
+    const temp = a;
+    a = b;
+    b = temp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  if (n + 1 > prevRow.length) {
+    // ⚡ Bolt: Grow array dynamically if needed, keeping them as Int32Array
+    prevRow = new Int32Array(n + 1);
+    currRow = new Int32Array(n + 1);
+  }
+
+  for (let i = 0; i <= n; i++) {
+    prevRow[i] = i;
+  }
 
   for (let i = 1; i <= m; i++) {
     currRow[0] = i;
@@ -267,7 +283,10 @@ function levenshtein(a: string, b: string): number {
         prevRow[j - 1] + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    // ⚡ Bolt: Swap rows without array destructuring to avoid object allocation
+    const tempRow = prevRow;
+    prevRow = currRow;
+    currRow = tempRow;
   }
   return prevRow[n];
 }

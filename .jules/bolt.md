@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-06-01 - Optimizing Levenshtein in Hot Paths
+**Learning:** In high-frequency hot paths like fuzzy matching search inputs, reallocating standard JavaScript arrays (`Array.from`, `new Array()`) and using array destructuring for swapping (`[a, b] = [b, a]`) creates significant memory allocations and Garbage Collection (GC) pauses.
+**Action:** Reuse module-level typed arrays (e.g., `Int32Array`) and temporary variables for swaps instead of reallocating standard arrays per call to eliminate memory allocations and reduce GC pressure.
