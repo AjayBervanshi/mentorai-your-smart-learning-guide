@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, AlertTriangle, CheckCircle2, Flame, Zap, Award } from "lucide-react";
 import { useLearning } from "@/context/LearningContext";
@@ -5,17 +6,21 @@ import { Progress } from "@/components/ui/progress";
 
 export default function ProgressScreen() {
   const { profile } = useLearning();
+
+  // ⚡ Bolt: Wrapped array processing in useMemo to prevent
+  // recalculating on unnecessary renders.
+  const { totalTopics, completedTopics } = useMemo(() => {
+    let t = 0;
+    let c = 0;
+    if (!profile) return { totalTopics: t, completedTopics: c };
+    for (const skill of profile.skills) {
+      t += skill.topics.length;
+      c += skill.completedTopics.length;
+    }
+    return { totalTopics: t, completedTopics: c };
+  }, [profile]);
+
   if (!profile) return null;
-
-  // ⚡ Bolt: Optimized array processing to O(N) by combining multiple
-  // .reduce() passes into a single pass over the skills array.
-  let totalTopics = 0;
-  let completedTopics = 0;
-
-  for (const skill of profile.skills) {
-    totalTopics += skill.topics.length;
-    completedTopics += skill.completedTopics.length;
-  }
 
   const overallProgress = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
