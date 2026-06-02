@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2026-04-30 - Optimize fuzzy search algorithm to reduce GC pressure
+**Learning:** Dynamic array allocations (e.g. `Array.from`) in tight loops, such as computing Levenshtein distance repeatedly for autocomplete on each keystroke, cause severe garbage collection pressure and UI latency.
+**Action:** Use a pre-allocated single module-level `Int32Array` cache instead of creating nested arrays on every call when optimizing frequently executed search operations.

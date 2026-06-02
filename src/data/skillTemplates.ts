@@ -249,27 +249,45 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+const _levenshteinCache = new Int32Array(256);
+
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a === b) return 0;
+  if (a.length < b.length) {
+    const tmp = a;
+    a = b;
+    b = tmp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  for (let j = 0; j <= n; j++) {
+    _levenshteinCache[j] = j;
+  }
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prevDiag = _levenshteinCache[0];
+    _levenshteinCache[0] = i;
+    const charA = a[i - 1];
+
     for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
-      );
+      const temp = _levenshteinCache[j];
+      if (charA === b[j - 1]) {
+        _levenshteinCache[j] = prevDiag;
+      } else {
+        const insertCost = _levenshteinCache[j - 1] + 1;
+        const deleteCost = _levenshteinCache[j] + 1;
+        const replaceCost = prevDiag + 1;
+
+        let min = insertCost < deleteCost ? insertCost : deleteCost;
+        if (replaceCost < min) min = replaceCost;
+
+        _levenshteinCache[j] = min;
+      }
+      prevDiag = temp;
     }
-    [prevRow, currRow] = [currRow, prevRow];
   }
-  return prevRow[n];
+  return _levenshteinCache[n];
 }
 
 /**
