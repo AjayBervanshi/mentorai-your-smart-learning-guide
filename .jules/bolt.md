@@ -11,3 +11,7 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-06-04 - TypedArray bounds checking
+
+**Learning:** When replacing JavaScript `Array` allocations with module-level `TypedArray` buffers (like `Int32Array`) to optimize hot paths and reduce GC pressure, they MUST be dynamically resized (`if (n > maxLen) { maxLen = n; arr = new Int32Array(maxLen + 1); }`). JavaScript `TypedArray`s do not auto-resize like standard Arrays, so failing to handle lengths exceeding the initial buffer size causes silent out-of-bounds errors (reads return `undefined`, evaluating to `NaN` in math operations).
+**Action:** Always include dynamic reallocation logic when using module-level typed arrays as reusable buffers.
