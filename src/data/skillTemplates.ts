@@ -249,27 +249,45 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// ⚡ Bolt: Reused module-level Int32Arrays to avoid array allocation per keystroke
+let levenshteinMaxLen = 0;
+let levenshteinPrevRow = new Int32Array(0);
+let levenshteinCurrRow = new Int32Array(0);
+
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    const temp = a;
+    a = b;
+    b = temp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  if (n > levenshteinMaxLen) {
+    levenshteinMaxLen = n;
+    levenshteinPrevRow = new Int32Array(levenshteinMaxLen + 1);
+    levenshteinCurrRow = new Int32Array(levenshteinMaxLen + 1);
+  }
+
+  for (let i = 0; i <= n; i++) {
+    levenshteinPrevRow[i] = i;
+  }
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    levenshteinCurrRow[0] = i;
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      levenshteinCurrRow[j] = Math.min(
+        levenshteinCurrRow[j - 1] + 1,
+        levenshteinPrevRow[j] + 1,
+        levenshteinPrevRow[j - 1] + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    const tempRow = levenshteinPrevRow;
+    levenshteinPrevRow = levenshteinCurrRow;
+    levenshteinCurrRow = tempRow;
   }
-  return prevRow[n];
+  return levenshteinPrevRow[n];
 }
 
 /**
