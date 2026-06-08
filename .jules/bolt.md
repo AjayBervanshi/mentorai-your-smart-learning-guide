@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-06-11 - [Eliminating array allocations in string algorithms]
+**Learning:** Hot path algorithms like Levenshtein distance, running frequently on user input (e.g., inside `findMatchingSkills`), suffer from memory churn and GC pauses when allocating new arrays (`new Array(n + 1)`, `Array.from()`) per call.
+**Action:** Use module-level `TypedArray` objects (like `Int32Array`) to eliminate array allocations. Manually dynamically resize buffers, and avoid destructuring assignments (`[a, b] = [b, a]`) to swap references by using a temporary variable, maximizing single-thread performance.
