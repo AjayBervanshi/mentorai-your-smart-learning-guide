@@ -249,27 +249,49 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+let maxLen = 0;
+let prevRowTyped = new Int32Array(0);
+let currRowTyped = new Int32Array(0);
+
+// ⚡ Bolt: Replaced per-call array allocations and destructuring with module-level
+// TypedArrays and manual reallocation to avoid GC pressure in this hot path.
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    const temp = a;
+    a = b;
+    b = temp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  if (n > maxLen) {
+    maxLen = n;
+    prevRowTyped = new Int32Array(maxLen + 1);
+    currRowTyped = new Int32Array(maxLen + 1);
+  }
+
+  for (let i = 0; i <= n; i++) {
+    prevRowTyped[i] = i;
+  }
+
+  let prev = prevRowTyped;
+  let curr = currRowTyped;
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    curr[0] = i;
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      curr[j] = Math.min(
+        curr[j - 1] + 1,
+        prev[j] + 1,
+        prev[j - 1] + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    const tempRow = prev;
+    prev = curr;
+    curr = tempRow;
   }
-  return prevRow[n];
+  return prev[n];
 }
 
 /**
