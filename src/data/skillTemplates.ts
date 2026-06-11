@@ -334,19 +334,22 @@ export function findMatchingSkills(input: string): string[] {
 
   if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
-    .sort((a, b) => a.dist - b.dist)
-    .map((x) => x.skill);
+  // ⚡ Bolt: Consolidate .map().filter() into a single loop to avoid intermediate array allocations
+  const fuzzy: { skill: string; dist: number }[] = [];
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    const dist = Math.min(
+      levenshtein(normalized, skillObj.lower),
+      levenshtein(clean, skillObj.clean)
+    );
+    if (dist <= 3) {
+      fuzzy.push({ skill: skillObj.original, dist });
+    }
+  }
 
-  return fuzzy.slice(0, 8);
+  fuzzy.sort((a, b) => a.dist - b.dist);
+
+  // ⚡ Bolt: Only map the final slice instead of mapping the entire sorted array
+  return fuzzy.slice(0, 8).map((x) => x.skill);
 }
 
 export function isValidSkill(input: string): boolean {
