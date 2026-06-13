@@ -11,3 +11,7 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+
+## 2024-06-13 - Eliminate Network Waterfalls with Local Derivations
+**Learning:** Found a performance bottleneck where updating progress triggered multiple sequential `SELECT` and `UPDATE` queries to Supabase. Waiting for network round-trips for state already available in React Context creates artificial latency.
+**Action:** Replace redundant `SELECT` queries with derivations from the robust local Context state, ensuring all necessary temporal properties (like `lastActiveDate`) are synced. Parallelize independent database `.update()` calls using `Promise.all()`.
