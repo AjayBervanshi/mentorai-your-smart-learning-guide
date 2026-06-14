@@ -36,9 +36,27 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { skill, topic, subtopics, contentType = "lesson" } = await req.json();
-    if (!skill || !topic) {
-      return new Response(JSON.stringify({ error: "skill and topic are required" }), {
+    const body = await req.json();
+    let { skill, topic, subtopics } = body;
+    const { contentType = "lesson" } = body;
+
+    if (!skill || !topic || typeof skill !== "string" || typeof topic !== "string") {
+      return new Response(JSON.stringify({ error: "skill and topic are required strings" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Security: Input validation to prevent prompt injection and cost exhaustion
+    skill = skill.slice(0, 100);
+    topic = topic.slice(0, 100);
+
+    if (subtopics && Array.isArray(subtopics)) {
+      subtopics = subtopics.slice(0, 10).map((s: string) => String(s).slice(0, 50));
+    }
+
+    const allowedContentTypes = ["lesson", "quiz", "interview"];
+    if (!allowedContentTypes.includes(contentType)) {
+      return new Response(JSON.stringify({ error: "Invalid content type" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
