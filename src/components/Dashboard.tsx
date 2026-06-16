@@ -308,9 +308,11 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                       aria-label="Delete skill"
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeSkill(skill.id).then(() => toast.success(`${skill.name} removed`)).catch(() => toast.error("Failed to remove skill"));
+                        if (window.confirm(`Are you sure you want to delete ${skill.name}? This action cannot be undone.`)) {
+                          removeSkill(skill.id).then(() => toast.success(`${skill.name} removed`)).catch(() => toast.error("Failed to remove skill"));
+                        }
                       }}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100"
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:outline-none"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
