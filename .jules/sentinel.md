@@ -23,3 +23,7 @@
 **Vulnerability:** The `generate-content` Supabase Edge Function lacked authentication checks. Supabase Edge Functions do not automatically enforce authentication by default when using anonymous keys or service role keys directly. This allowed any external entity to call the endpoint, exhaust AI credits, and fill the cache database, as long as they sent requests to the endpoint URL.
 **Learning:** Supabase Edge Functions require manual token verification. Developers must extract the `Authorization` header from the incoming request and use `supabaseClient.auth.getUser()` to verify the token explicitly.
 **Prevention:** Always implement explicit authentication header extraction and token validation at the beginning of sensitive Edge Functions before performing any business logic or external API calls.
+## 2025-02-27 - AI Gateway Input Validation
+**Vulnerability:** Unbounded user input in Supabase Edge Functions passing directly to AI completion APIs.
+**Learning:** Third-party AI gateway integrations are vulnerable to cost exhaustion/denial-of-service and prompt injection if input parameters (like `skill` or `topic`) have no explicit length constraints and control parameters (like `contentType`) have no strict allowlists.
+**Prevention:** Always enforce strict length limits on user-provided strings/arrays and use strict allowlists for control parameters before passing them to external AI APIs.
