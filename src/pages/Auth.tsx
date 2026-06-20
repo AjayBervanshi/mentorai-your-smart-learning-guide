@@ -77,12 +77,14 @@ export default function Auth() {
       });
       if (result.error) {
         // Security Fix: Do not leak detailed error messages to user
-        console.error('Google sign-in error from provider:', result.error);
+        console.error('Google sign-in error from provider:', result.error instanceof Error ? result.error.message : result.error);
         toast.error("Google sign-in failed. Please try again.");
       }
       if (result.redirected) return;
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Google sign-in failed");
+      // Security Fix: Do not leak detailed error messages to user
+      console.error('Google sign-in unexpected error:', err instanceof Error ? err.message : err);
+      toast.error("Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -23,3 +23,8 @@
 **Vulnerability:** The `generate-content` Supabase Edge Function lacked authentication checks. Supabase Edge Functions do not automatically enforce authentication by default when using anonymous keys or service role keys directly. This allowed any external entity to call the endpoint, exhaust AI credits, and fill the cache database, as long as they sent requests to the endpoint URL.
 **Learning:** Supabase Edge Functions require manual token verification. Developers must extract the `Authorization` header from the incoming request and use `supabaseClient.auth.getUser()` to verify the token explicitly.
 **Prevention:** Always implement explicit authentication header extraction and token validation at the beginning of sensitive Edge Functions before performing any business logic or external API calls.
+
+## 2024-04-16 - Error Leakage in Google Sign-in Provider
+**Vulnerability:** The `handleGoogleAuth` function in `src/pages/Auth.tsx` was displaying detailed error messages from the Google OAuth provider and catching unexpected errors directly to the user UI via toast notifications. This could leak technical implementation details or provider-specific information to attackers.
+**Learning:** Toast notifications and other user-facing UI elements should never directly render raw error messages from external providers or unhandled catch blocks.
+**Prevention:** Sanitize error messages by logging the technical details to the console (after ensuring the logged object itself is sanitized) and displaying a generic, user-friendly message to the end-user.
