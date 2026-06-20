@@ -43,6 +43,21 @@ serve(async (req) => {
       });
     }
 
+    // Security Enhancement: Validate contentType to prevent unexpected behavior
+    const allowedContentTypes = ["lesson", "quiz", "interview"];
+    if (!allowedContentTypes.includes(contentType)) {
+      return new Response(JSON.stringify({ error: "Invalid content type" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Security Enhancement: Validate length of inputs to prevent DoS or prompt injection bloat
+    if (skill.length > 100 || topic.length > 200) {
+      return new Response(JSON.stringify({ error: "Input too long" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Check cache first
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
