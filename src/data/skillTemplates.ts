@@ -326,27 +326,37 @@ export function findMatchingSkills(input: string): string[] {
   if (normalized.length < 2) return [];
   const clean = normalized.replace(SKILL_NAME_CLEAN_REGEX, "");
 
-  const substringMatches = PREPARED_SKILL_CATEGORIES.filter(
-    (skillObj) =>
-      skillObj.lower.includes(normalized) ||
-      normalized.includes(skillObj.lower)
-  );
+  // ⚡ Bolt: Optimized substring matching by using a single pass loop
+  // with an early exit to avoid scanning the entire array once 8 matches are found.
+  const substringMatches: string[] = [];
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    if (skillObj.lower.includes(normalized) || normalized.includes(skillObj.lower)) {
+      substringMatches.push(skillObj.original);
+      if (substringMatches.length >= 8) {
+        break;
+      }
+    }
+  }
 
-  if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
+  if (substringMatches.length > 0) return substringMatches;
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
+  // ⚡ Bolt: Optimized fuzzy matching by replacing chained .map().filter()
+  // with a single loop to avoid creating intermediate objects for rejected matches.
+  const fuzzy: { skill: string; dist: number }[] = [];
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    const dist = Math.min(
+      levenshtein(normalized, skillObj.lower),
+      levenshtein(clean, skillObj.clean)
+    );
+    if (dist <= 3) {
+      fuzzy.push({ skill: skillObj.original, dist });
+    }
+  }
+
+  return fuzzy
     .sort((a, b) => a.dist - b.dist)
+    .slice(0, 8)
     .map((x) => x.skill);
-
-  return fuzzy.slice(0, 8);
 }
 
 export function isValidSkill(input: string): boolean {
