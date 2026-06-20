@@ -249,27 +249,35 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// ⚡ Bolt: Single pre-allocated typed array buffer to prevent excessive
+// memory allocation and GC pressure during tight autocomplete loops.
+const levenshteinBuffer = new Int32Array(100);
+
 function levenshtein(a: string, b: string): number {
   if (a.length < b.length) [a, b] = [b, a];
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  // ⚡ Bolt: Fallback to new array only if strings are unusually long
+  const row = n + 1 <= levenshteinBuffer.length ? levenshteinBuffer : new Int32Array(n + 1);
+  for (let i = 0; i <= n; i++) row[i] = i;
 
+  // ⚡ Bolt: Use a single array with prevDiag rather than swapping two arrays
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prevDiag = row[0];
+    row[0] = i;
     for (let j = 1; j <= n; j++) {
+      const prevDiagTmp = row[j];
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      row[j] = Math.min(
+        row[j - 1] + 1,
+        row[j] + 1,
+        prevDiag + cost
       );
+      prevDiag = prevDiagTmp;
     }
-    [prevRow, currRow] = [currRow, prevRow];
   }
-  return prevRow[n];
+  return row[n];
 }
 
 /**
@@ -299,12 +307,26 @@ export function normalizeSkillName(input: string): string | null {
   let bestMatch: string | null = null;
   let bestDist = Infinity;
 
-  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
-    const dist = levenshtein(lower, skillObj.lower);
-    const distClean = levenshtein(clean, skillObj.clean);
-    const minDist = Math.min(dist, distClean);
-    if (minDist < bestDist) {
-      bestDist = minDist;
+  for (let i = 0; i < PREPARED_SKILL_CATEGORIES.length; i++) {
+    const skillObj = PREPARED_SKILL_CATEGORIES[i];
+
+    // ⚡ Bolt: Early exit: if length difference already exceeds best distance,
+    // it's impossible to beat the current best match, so skip levenshtein computation.
+    const lenDiffLower = Math.abs(lower.length - skillObj.lower.length);
+    const lenDiffClean = Math.abs(clean.length - skillObj.clean.length);
+
+    if (lenDiffLower >= bestDist && lenDiffClean >= bestDist) continue;
+
+    let distLower = Infinity;
+    let distClean = Infinity;
+
+    if (lenDiffLower < bestDist) distLower = levenshtein(lower, skillObj.lower);
+    if (lenDiffClean < bestDist) distClean = levenshtein(clean, skillObj.clean);
+
+    const dist = Math.min(distLower, distClean);
+
+    if (dist < bestDist) {
+      bestDist = dist;
       bestMatch = skillObj.original;
     }
   }
@@ -326,27 +348,50 @@ export function findMatchingSkills(input: string): string[] {
   if (normalized.length < 2) return [];
   const clean = normalized.replace(SKILL_NAME_CLEAN_REGEX, "");
 
-  const substringMatches = PREPARED_SKILL_CATEGORIES.filter(
-    (skillObj) =>
-      skillObj.lower.includes(normalized) ||
-      normalized.includes(skillObj.lower)
-  );
+  const substringMatches: string[] = [];
+  for (let i = 0; i < PREPARED_SKILL_CATEGORIES.length; i++) {
+    const skillObj = PREPARED_SKILL_CATEGORIES[i];
+    if (skillObj.lower.includes(normalized) || normalized.includes(skillObj.lower)) {
+      substringMatches.push(skillObj.original);
+      if (substringMatches.length >= 8) return substringMatches;
+    }
+  }
 
-  if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
+  if (substringMatches.length > 0) return substringMatches;
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
-    .sort((a, b) => a.dist - b.dist)
-    .map((x) => x.skill);
+  const fuzzy: { skill: string; dist: number }[] = [];
+  for (let i = 0; i < PREPARED_SKILL_CATEGORIES.length; i++) {
+    const skillObj = PREPARED_SKILL_CATEGORIES[i];
 
-  return fuzzy.slice(0, 8);
+    // ⚡ Bolt: Early exit: if length difference already exceeds our distance threshold (3),
+    // it's impossible to be a valid fuzzy match, so skip levenshtein computation.
+    const lenDiffLower = Math.abs(normalized.length - skillObj.lower.length);
+    const lenDiffClean = Math.abs(clean.length - skillObj.clean.length);
+
+    if (lenDiffLower > 3 && lenDiffClean > 3) continue;
+
+    let distLower = Infinity;
+    let distClean = Infinity;
+
+    // ⚡ Bolt: Must compute distance for ALL variations within length-difference threshold
+    // before determining minimum to prevent incorrect sort order from early-skipping.
+    if (lenDiffLower <= 3) distLower = levenshtein(normalized, skillObj.lower);
+    if (lenDiffClean <= 3) distClean = levenshtein(clean, skillObj.clean);
+
+    const dist = Math.min(distLower, distClean);
+
+    if (dist <= 3) {
+      fuzzy.push({ skill: skillObj.original, dist });
+    }
+  }
+
+  fuzzy.sort((a, b) => a.dist - b.dist);
+
+  const result: string[] = [];
+  for (let i = 0; i < Math.min(8, fuzzy.length); i++) {
+    result.push(fuzzy[i].skill);
+  }
+  return result;
 }
 
 export function isValidSkill(input: string): boolean {

@@ -47,6 +47,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             .from("user_skills")
             .select("*")
             .eq("user_id", userId),
+
           supabase
             .from("user_topics")
             .select("*")
