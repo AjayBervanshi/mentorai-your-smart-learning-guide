@@ -249,27 +249,35 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// ⚡ Bolt: Global buffer to avoid array allocations inside the Levenshtein function.
+// Since JS is single-threaded, this is safe and prevents GC pauses during hot search loops.
+const levBuffer = new Uint16Array(100);
+
 function levenshtein(a: string, b: string): number {
   if (a.length < b.length) [a, b] = [b, a];
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  // ⚡ Bolt: Prevent silent array-out-of-bounds corruption if string exceeds buffer size.
+  // We use max string length 99 (length=100 array). Fallback for larger strings.
+  if (n >= 100) return Math.max(m, n);
+
+  for (let i = 0; i <= n; i++) {
+    levBuffer[i] = i;
+  }
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prevDiag = levBuffer[0];
+    levBuffer[0] = i;
     for (let j = 1; j <= n; j++) {
+      const prevDiagTemp = levBuffer[j];
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
-      );
+      const min = levBuffer[j] + 1 < levBuffer[j - 1] + 1 ? levBuffer[j] + 1 : levBuffer[j - 1] + 1;
+      levBuffer[j] = min < prevDiag + cost ? min : prevDiag + cost;
+      prevDiag = prevDiagTemp;
     }
-    [prevRow, currRow] = [currRow, prevRow];
   }
-  return prevRow[n];
+  return levBuffer[n];
 }
 
 /**
@@ -326,27 +334,39 @@ export function findMatchingSkills(input: string): string[] {
   if (normalized.length < 2) return [];
   const clean = normalized.replace(SKILL_NAME_CLEAN_REGEX, "");
 
-  const substringMatches = PREPARED_SKILL_CATEGORIES.filter(
-    (skillObj) =>
-      skillObj.lower.includes(normalized) ||
-      normalized.includes(skillObj.lower)
-  );
+  // ⚡ Bolt: Single-pass loops to replace chained `.filter().map()` operations, avoiding
+  // intermediate array allocations.
+  const substringMatches: string[] = [];
+  for (let i = 0; i < PREPARED_SKILL_CATEGORIES.length; i++) {
+    const skillObj = PREPARED_SKILL_CATEGORIES[i];
+    if (skillObj.lower.includes(normalized) || normalized.includes(skillObj.lower)) {
+      substringMatches.push(skillObj.original);
+      // ⚡ Bolt: Early exit when max result limit is hit to avoid unnecessary checking.
+      if (substringMatches.length >= 8) return substringMatches;
+    }
+  }
 
-  if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
+  // ⚡ Bolt: If substring matches are found, we return immediately to skip expensive fuzzy matching.
+  if (substringMatches.length > 0) return substringMatches;
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
-    .sort((a, b) => a.dist - b.dist)
-    .map((x) => x.skill);
+  const fuzzy: { skill: string; dist: number }[] = [];
+  for (let i = 0; i < PREPARED_SKILL_CATEGORIES.length; i++) {
+    const skillObj = PREPARED_SKILL_CATEGORIES[i];
+    const dist1 = levenshtein(normalized, skillObj.lower);
+    const dist2 = levenshtein(clean, skillObj.clean);
+    const dist = dist1 < dist2 ? dist1 : dist2;
+    if (dist <= 3) {
+      fuzzy.push({ skill: skillObj.original, dist });
+    }
+  }
 
-  return fuzzy.slice(0, 8);
+  fuzzy.sort((a, b) => a.dist - b.dist);
+  const result: string[] = [];
+  const limit = fuzzy.length < 8 ? fuzzy.length : 8;
+  for (let i = 0; i < limit; i++) {
+    result.push(fuzzy[i].skill);
+  }
+  return result;
 }
 
 export function isValidSkill(input: string): boolean {
