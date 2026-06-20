@@ -23,3 +23,8 @@
 **Vulnerability:** The `generate-content` Supabase Edge Function lacked authentication checks. Supabase Edge Functions do not automatically enforce authentication by default when using anonymous keys or service role keys directly. This allowed any external entity to call the endpoint, exhaust AI credits, and fill the cache database, as long as they sent requests to the endpoint URL.
 **Learning:** Supabase Edge Functions require manual token verification. Developers must extract the `Authorization` header from the incoming request and use `supabaseClient.auth.getUser()` to verify the token explicitly.
 **Prevention:** Always implement explicit authentication header extraction and token validation at the beginning of sensitive Edge Functions before performing any business logic or external API calls.
+
+## 2026-04-30 - Prevent Open Redirect Vulnerabilities
+**Vulnerability:** Open redirect using window.location.origin for authentication flows
+**Learning:** Relying purely on client-side origin can be manipulated. Using environment-level configuration (VITE_APP_URL) provides an authoritative, defense-in-depth source.
+**Prevention:** Prioritize VITE_APP_URL when computing base URLs for OAuth and password resets. Use the `getAppUrl` utility to normalize it.
