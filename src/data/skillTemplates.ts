@@ -249,27 +249,33 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+// Pre-allocate a buffer for the most common skill name lengths to avoid
+// dynamic array allocations in the hot path.
+const levBuffer = new Int32Array(256);
+
 function levenshtein(a: string, b: string): number {
   if (a.length < b.length) [a, b] = [b, a];
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  const row = n < 256 ? levBuffer : new Int32Array(n + 1);
+  for (let i = 0; i <= n; i++) row[i] = i;
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prev = i;
     for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
-      );
+      let val;
+      if (a[i - 1] === b[j - 1]) {
+        val = row[j - 1];
+      } else {
+        val = Math.min(row[j - 1], prev, row[j]) + 1;
+      }
+      row[j - 1] = prev;
+      prev = val;
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    row[n] = prev;
   }
-  return prevRow[n];
+  return row[n];
 }
 
 /**
@@ -326,27 +332,38 @@ export function findMatchingSkills(input: string): string[] {
   if (normalized.length < 2) return [];
   const clean = normalized.replace(SKILL_NAME_CLEAN_REGEX, "");
 
-  const substringMatches = PREPARED_SKILL_CATEGORIES.filter(
-    (skillObj) =>
-      skillObj.lower.includes(normalized) ||
-      normalized.includes(skillObj.lower)
-  );
+  const substringMatches: string[] = [];
 
-  if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
+  // Single-pass fast substring check
+  for (let i = 0; i < PREPARED_SKILL_CATEGORIES.length; i++) {
+    const skillObj = PREPARED_SKILL_CATEGORIES[i];
+    if (skillObj.lower.includes(normalized) || normalized.includes(skillObj.lower)) {
+        substringMatches.push(skillObj.original);
+        if (substringMatches.length >= 8) return substringMatches;
+    }
+  }
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
-    .sort((a, b) => a.dist - b.dist)
-    .map((x) => x.skill);
+  if (substringMatches.length > 0) return substringMatches;
 
-  return fuzzy.slice(0, 8);
+  const fuzzy: { skill: string, dist: number }[] = [];
+
+  // Single-pass fuzzy matching with length-based early exits
+  for (let i = 0; i < PREPARED_SKILL_CATEGORIES.length; i++) {
+      const skillObj = PREPARED_SKILL_CATEGORIES[i];
+      let dist = 4; // Max allowed + 1
+      if (Math.abs(normalized.length - skillObj.lower.length) <= 3) {
+        dist = levenshtein(normalized, skillObj.lower);
+      }
+      if (Math.abs(clean.length - skillObj.clean.length) <= 3) {
+        const cleanDist = levenshtein(clean, skillObj.clean);
+        if (cleanDist < dist) dist = cleanDist;
+      }
+      if (dist <= 3) {
+          fuzzy.push({ skill: skillObj.original, dist });
+      }
+  }
+
+  return fuzzy.sort((a, b) => a.dist - b.dist).map(x => x.skill).slice(0, 8);
 }
 
 export function isValidSkill(input: string): boolean {
