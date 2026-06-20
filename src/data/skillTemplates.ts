@@ -249,27 +249,33 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+const LEV_BUFFER = new Int32Array(100);
+
 function levenshtein(a: string, b: string): number {
   if (a.length < b.length) [a, b] = [b, a];
   const m = a.length, n = b.length;
   if (n === 0) return m;
+  if (n >= LEV_BUFFER.length) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  for (let j = 0; j <= n; j++) {
+    LEV_BUFFER[j] = j;
+  }
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prevDiag = LEV_BUFFER[0];
+    LEV_BUFFER[0] = i;
     for (let j = 1; j <= n; j++) {
+      const prevPrevDiag = prevDiag;
+      prevDiag = LEV_BUFFER[j];
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      LEV_BUFFER[j] = Math.min(
+        LEV_BUFFER[j - 1] + 1,
+        LEV_BUFFER[j] + 1,
+        prevPrevDiag + cost
       );
     }
-    [prevRow, currRow] = [currRow, prevRow];
   }
-  return prevRow[n];
+  return LEV_BUFFER[n];
 }
 
 /**
@@ -299,17 +305,21 @@ export function normalizeSkillName(input: string): string | null {
   let bestMatch: string | null = null;
   let bestDist = Infinity;
 
+  const threshold = lower.length > 6 ? 3 : 2;
+
   for (const skillObj of PREPARED_SKILL_CATEGORIES) {
-    const dist = levenshtein(lower, skillObj.lower);
-    const distClean = levenshtein(clean, skillObj.clean);
-    const minDist = Math.min(dist, distClean);
+    let minDist = Infinity;
+    if (Math.abs(lower.length - skillObj.lower.length) <= threshold || Math.abs(clean.length - skillObj.clean.length) <= threshold) {
+      const dist = levenshtein(lower, skillObj.lower);
+      const distClean = levenshtein(clean, skillObj.clean);
+      minDist = Math.min(dist, distClean);
+    }
+
     if (minDist < bestDist) {
       bestDist = minDist;
       bestMatch = skillObj.original;
     }
   }
-
-  const threshold = lower.length > 6 ? 3 : 2;
   if (bestMatch && bestDist <= threshold) {
     return bestMatch;
   }
@@ -334,19 +344,22 @@ export function findMatchingSkills(input: string): string[] {
 
   if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
-    .sort((a, b) => a.dist - b.dist)
-    .map((x) => x.skill);
+  const fuzzy: { skill: string; dist: number }[] = [];
 
-  return fuzzy.slice(0, 8);
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    if (Math.abs(normalized.length - skillObj.lower.length) > 3 && Math.abs(clean.length - skillObj.clean.length) > 3) {
+      continue;
+    }
+    const dist = Math.min(
+      levenshtein(normalized, skillObj.lower),
+      levenshtein(clean, skillObj.clean)
+    );
+    if (dist <= 3) {
+      fuzzy.push({ skill: skillObj.original, dist });
+    }
+  }
+
+  return fuzzy.sort((a, b) => a.dist - b.dist).slice(0, 8).map(x => x.skill);
 }
 
 export function isValidSkill(input: string): boolean {
