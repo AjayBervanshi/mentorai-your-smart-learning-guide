@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2025-06-23 - [Optimize Levenshtein Distance and Array Churn]
+**Learning:** In hot paths (like `onChange` search inputs querying 100+ items via Levenshtein distance), recurrent array allocations in the fuzzy match loop (`Array.from`, `new Array()`) and long `.map().filter().sort()` chains cause significant latency spikes.
+**Action:** When executing high-frequency iterations over data blocks, utilize a single pre-allocated module-level `Int32Array` for algorithms like Levenshtein distance to eliminate Garbage Collection overhead, and condense array iterators into simple `for...of` loops with early-exits to prune search space.
