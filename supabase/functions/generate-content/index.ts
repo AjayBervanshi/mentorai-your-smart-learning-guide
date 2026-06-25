@@ -36,11 +36,42 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const { skill, topic, subtopics, contentType = "lesson" } = await req.json();
-    if (!skill || !topic) {
-      return new Response(JSON.stringify({ error: "skill and topic are required" }), {
+    const reqBody = await req.json();
+    const skill = reqBody.skill;
+    const topic = reqBody.topic;
+    const contentType = reqBody.contentType ?? "lesson";
+    let subtopics = reqBody.subtopics;
+
+    if (!skill || !topic || typeof skill !== "string" || typeof topic !== "string") {
+      return new Response(JSON.stringify({ error: "skill and topic are required strings" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (skill.length > 200 || topic.length > 200) {
+      return new Response(JSON.stringify({ error: "Input exceeds maximum length" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const allowedContentTypes = ["lesson", "quiz", "interview"];
+    if (!allowedContentTypes.includes(contentType)) {
+      return new Response(JSON.stringify({ error: "Invalid contentType" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (Array.isArray(subtopics)) {
+      if (subtopics.length > 30) {
+        return new Response(JSON.stringify({ error: "Too many subtopics" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      subtopics = subtopics
+        .filter((t) => typeof t === "string")
+        .map((t) => String(t).substring(0, 200));
+    } else {
+      subtopics = [];
     }
 
     // Check cache first
