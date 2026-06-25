@@ -23,7 +23,12 @@ export default function ProjectsScreen() {
       ) : (
         profile.skills.map((skill) => {
           const projects = getProjectsForSkill(skill.name);
-          const unlockedCount = projects.filter(p => skill.progress >= p.minProgress).length;
+          let unlockedCount = 0;
+          for (const p of projects) {
+            if (skill.progress >= p.minProgress) {
+              unlockedCount++;
+            }
+          }
           return (
             <div key={skill.id} className="space-y-3">
               <div className="flex items-center justify-between">
