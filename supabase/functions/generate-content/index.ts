@@ -37,11 +37,28 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const { skill, topic, subtopics, contentType = "lesson" } = await req.json();
-    if (!skill || !topic) {
-      return new Response(JSON.stringify({ error: "skill and topic are required" }), {
+    if (!skill || !topic || typeof skill !== "string" || typeof topic !== "string") {
+      return new Response(JSON.stringify({ error: "skill and topic are required strings" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    if (skill.length > 100 || topic.length > 200) {
+      return new Response(JSON.stringify({ error: "skill or topic exceeds maximum length" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const validContentTypes = ["lesson", "quiz", "interview"];
+    if (!validContentTypes.includes(contentType)) {
+      return new Response(JSON.stringify({ error: "Invalid content type" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const safeSubtopics = Array.isArray(subtopics)
+      ? subtopics.filter(s => typeof s === "string").map(s => String(s).slice(0, 100)).slice(0, 10)
+      : [];
 
     // Check cache first
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -70,7 +87,7 @@ serve(async (req) => {
     if (contentType === "lesson") {
       systemPrompt = `You are an expert educator creating comprehensive learning content. Return valid JSON only, no markdown wrapping.`;
       userPrompt = `Create a detailed lesson for the topic "${topic}" in "${skill}". 
-Subtopics to cover: ${(subtopics || []).join(", ")}.
+Subtopics to cover: ${safeSubtopics.join(", ")}.
 
 Return JSON with this exact structure:
 {
@@ -92,7 +109,7 @@ Return JSON with this exact structure:
     } else if (contentType === "quiz") {
       systemPrompt = `You are an expert quiz creator for educational content. Return valid JSON only, no markdown wrapping.`;
       userPrompt = `Create 5 quiz questions for the topic "${topic}" in "${skill}".
-Subtopics: ${(subtopics || []).join(", ")}.
+Subtopics: ${safeSubtopics.join(", ")}.
 
 Return JSON array with this exact structure:
 [
@@ -194,7 +211,7 @@ Return JSON array:
 
   } catch (e) {
     console.error("generate-content error:", e instanceof Error ? e.message : "Unknown error");
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "An internal server error occurred" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
