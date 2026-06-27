@@ -319,12 +319,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           const newProgress = Math.round((completedCount / allTopics.length) * 100);
           const newCurrentTopicIndex = Math.min(completedCount, allTopics.length - 1);
 
-          await supabase
-            .from("user_skills")
-            .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
-            .eq("id", skillId)
-            .eq("user_id", userId);
-
           // Update XP and streak — use UTC date consistently to avoid timezone drift
           const todayUTC = new Date().toISOString().split("T")[0];
 
@@ -333,6 +327,14 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
             .select("last_active_date, streak, total_xp")
             .eq("user_id", userId)
             .single();
+
+          const updatePromises: Promise<unknown>[] = [
+            supabase
+              .from("user_skills")
+              .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
+              .eq("id", skillId)
+              .eq("user_id", userId)
+          ];
 
           if (lpData) {
             let newStreak = lpData.streak || 0;
@@ -352,14 +354,18 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
               }
             }
 
-            await supabase
-              .from("user_learning_profiles")
-              .update({
-                total_xp: (lpData.total_xp || 0) + score,
-                streak: newStreak,
-                last_active_date: todayUTC,
-              })
-              .eq("user_id", userId);
+            updatePromises.push(
+              supabase
+                .from("user_learning_profiles")
+                .update({
+                  total_xp: (lpData.total_xp || 0) + score,
+                  streak: newStreak,
+                  last_active_date: todayUTC,
+                })
+                .eq("user_id", userId)
+            );
+
+            await Promise.all(updatePromises);
 
             // Update local state
             setProfile((prev) => {
@@ -397,13 +403,15 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
               });
               return { ...prev, skills, totalXP: (lpData.total_xp || 0) + score, streak: newStreak };
             });
+          } else {
+            await Promise.all(updatePromises);
           }
         }
       } catch (err) {
         console.error("Failed to update progress:", err);
       }
     },
-    [userId]
+    [userId, profile]
   );
 
   const getActiveSkill = useCallback(() => {
