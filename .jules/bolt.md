@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-05-18 - Optimize updateSkillProgress by batching update statements
+**Learning:** Using `Promise.all` allows parallel execution of independent database queries, and deriving the updated values directly from state instead of performing a secondary query greatly reduces unnecessary network calls and overall latency.
+**Action:** Prioritize checking existing client state for intermediate calculations before introducing additional `SELECT` statements in complex update flows.
