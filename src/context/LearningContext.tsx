@@ -302,102 +302,103 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
       if (!userId || !profile) return;
 
       try {
-        await supabase
-          .from("user_topics")
-          .update({ completed: score >= 60, score })
-          .eq("id", topicId)
-          .eq("user_id", userId);
+        const targetSkill = profile.skills.find(s => s.id === skillId);
+        if (!targetSkill) return;
 
-        const { data: allTopics } = await supabase
-          .from("user_topics")
-          .select("*")
-          .eq("skill_id", skillId)
-          .eq("user_id", userId);
+        const updatedTopics = targetSkill.topics.map(t =>
+          t.id === topicId ? { ...t, completed: score >= 60, score } : t
+        );
 
-        if (allTopics) {
-          const completedCount = allTopics.filter((t) => t.completed).length;
-          const newProgress = Math.round((completedCount / allTopics.length) * 100);
-          const newCurrentTopicIndex = Math.min(completedCount, allTopics.length - 1);
+        const completedCount = updatedTopics.filter((t) => t.completed).length;
+        const newProgress = Math.round((completedCount / updatedTopics.length) * 100);
+        const newCurrentTopicIndex = Math.min(completedCount, updatedTopics.length - 1);
 
-          await supabase
-            .from("user_skills")
-            .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
-            .eq("id", skillId)
-            .eq("user_id", userId);
+        // Fetch learning profile first to calculate streak
+        const { data: lpData } = await supabase
+          .from("user_learning_profiles")
+          .select("last_active_date, streak, total_xp")
+          .eq("user_id", userId)
+          .single();
 
-          // Update XP and streak — use UTC date consistently to avoid timezone drift
+        if (lpData) {
           const todayUTC = new Date().toISOString().split("T")[0];
+          let newStreak = lpData.streak || 0;
+          const lastDate = lpData.last_active_date;
 
-          const { data: lpData } = await supabase
-            .from("user_learning_profiles")
-            .select("last_active_date, streak, total_xp")
-            .eq("user_id", userId)
-            .single();
+          if (lastDate !== todayUTC) {
+            const yesterday = new Date();
+            yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-          if (lpData) {
-            let newStreak = lpData.streak || 0;
-            const lastDate = lpData.last_active_date;
-
-            if (lastDate !== todayUTC) {
-              const yesterday = new Date();
-              yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-              const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-              if (lastDate === yesterdayStr) {
-                newStreak += 1;
-              } else if (!lastDate) {
-                newStreak = 1;
-              } else {
-                newStreak = 1; // reset
-              }
+            if (lastDate === yesterdayStr) {
+              newStreak += 1;
+            } else if (!lastDate) {
+              newStreak = 1;
+            } else {
+              newStreak = 1; // reset
             }
+          }
 
-            await supabase
+          // Batch the independent UPDATE queries
+          const updatePromises = [
+            supabase
+              .from("user_topics")
+              .update({ completed: score >= 60, score })
+              .eq("id", topicId)
+              .eq("user_id", userId),
+            supabase
+              .from("user_skills")
+              .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
+              .eq("id", skillId)
+              .eq("user_id", userId),
+            supabase
               .from("user_learning_profiles")
               .update({
                 total_xp: (lpData.total_xp || 0) + score,
                 streak: newStreak,
                 last_active_date: todayUTC,
               })
-              .eq("user_id", userId);
+              .eq("user_id", userId)
+          ];
 
-            // Update local state
-            setProfile((prev) => {
-              if (!prev) return prev;
-              const skills = prev.skills.map((skill) => {
-                if (skill.id !== skillId) return skill;
-                const topics = skill.topics.map((t) =>
-                  t.id === topicId ? { ...t, completed: score >= 60, score } : t
-                );
+          await Promise.all(updatePromises);
 
-                // ⚡ Bolt: Optimized local state array processing to O(N) by replacing
-                // chained .filter().map() with a single pass over topics.
-                let completedCount = 0;
-                const completedTopics: string[] = [];
-                const weakTopics: string[] = [];
+          // Update local state
+          setProfile((prev) => {
+            if (!prev) return prev;
+            const skills = prev.skills.map((skill) => {
+              if (skill.id !== skillId) return skill;
+              const topics = skill.topics.map((t) =>
+                t.id === topicId ? { ...t, completed: score >= 60, score } : t
+              );
 
-                for (const t of topics) {
-                  if (t.completed) {
-                    completedCount++;
-                    completedTopics.push(t.id);
-                  }
-                  if (t.score !== undefined && t.score < 60) {
-                    weakTopics.push(t.id);
-                  }
+              // ⚡ Bolt: Optimized local state array processing to O(N) by replacing
+              // chained .filter().map() with a single pass over topics.
+              let completedCount = 0;
+              const completedTopics: string[] = [];
+              const weakTopics: string[] = [];
+
+              for (const t of topics) {
+                if (t.completed) {
+                  completedCount++;
+                  completedTopics.push(t.id);
                 }
+                if (t.score !== undefined && t.score < 60) {
+                  weakTopics.push(t.id);
+                }
+              }
 
-                return {
-                  ...skill,
-                  topics,
-                  progress: Math.round((completedCount / topics.length) * 100),
-                  completedTopics,
-                  weakTopics,
-                  currentTopicIndex: Math.min(completedCount, topics.length - 1),
-                };
-              });
-              return { ...prev, skills, totalXP: (lpData.total_xp || 0) + score, streak: newStreak };
+              return {
+                ...skill,
+                topics,
+                progress: Math.round((completedCount / topics.length) * 100),
+                completedTopics,
+                weakTopics,
+                currentTopicIndex: Math.min(completedCount, topics.length - 1),
+              };
             });
-          }
+            return { ...prev, skills, totalXP: (lpData.total_xp || 0) + score, streak: newStreak };
+          });
         }
       } catch (err) {
         console.error("Failed to update progress:", err);
