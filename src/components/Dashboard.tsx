@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flame, Zap, BookOpen, ChevronRight, Trophy, Plus, X, Loader2, Trash2, Target, Clock, AlertTriangle } from "lucide-react";
 import { useLearning } from "@/context/LearningContext";
@@ -22,39 +22,52 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [addingSkill, setAddingSkill] = useState(false);
 
-  if (!profile) return null;
-
   // ⚡ Bolt: Optimized local state array processing to O(N) by replacing
   // multiple .reduce() and .find() calls with a single pass.
-  let totalProgressSum = 0;
-  let totalTopics = 0;
-  let completedTopics = 0;
-  let currentSkill: typeof profile.skills[0] | undefined = undefined;
-  const weakTopicsList: { skill: typeof profile.skills[0]; topic: typeof profile.skills[0]["topics"][0] }[] = [];
+  // Memoized to prevent recalculation on every keystroke in the "Add Skill" input.
+  const { totalProgress, totalTopics, completedTopics, currentSkill, weakTopicsList, currentTopic } = useMemo(() => {
+    if (!profile) return { totalProgress: 0, totalTopics: 0, completedTopics: 0, currentSkill: undefined, weakTopicsList: [], currentTopic: undefined };
+    let totalProgressSum = 0;
+    let totalTopicsCount = 0;
+    let completedTopicsCount = 0;
+    let currSkill: typeof profile.skills[0] | undefined = undefined;
+    const weakList: { skill: typeof profile.skills[0]; topic: typeof profile.skills[0]["topics"][0] }[] = [];
 
-  for (const skill of profile.skills) {
-    totalProgressSum += skill.progress;
-    totalTopics += skill.topics.length;
-    completedTopics += skill.completedTopics.length;
-    if (!currentSkill && skill.progress < 100) {
-      currentSkill = skill;
-    }
-    for (const t of skill.topics) {
-      if (t.score !== undefined && t.score < 60) {
-        weakTopicsList.push({ skill, topic: t });
+    for (const skill of profile.skills) {
+      totalProgressSum += skill.progress;
+      totalTopicsCount += skill.topics.length;
+      completedTopicsCount += skill.completedTopics.length;
+      if (!currSkill && skill.progress < 100) {
+        currSkill = skill;
+      }
+      for (const t of skill.topics) {
+        if (t.score !== undefined && t.score < 60) {
+          weakList.push({ skill, topic: t });
+        }
       }
     }
-  }
 
-  if (!currentSkill && profile.skills.length > 0) {
-    currentSkill = profile.skills[0];
-  }
+    if (!currSkill && profile.skills.length > 0) {
+      currSkill = profile.skills[0];
+    }
 
-  const totalProgress = profile.skills.length
-    ? Math.round(totalProgressSum / profile.skills.length)
-    : 0;
+    const calculatedTotalProgress = profile.skills.length
+      ? Math.round(totalProgressSum / profile.skills.length)
+      : 0;
 
-  const currentTopic = currentSkill?.topics[currentSkill.currentTopicIndex];
+    const currTopic = currSkill?.topics[currSkill.currentTopicIndex];
+
+    return {
+      totalProgress: calculatedTotalProgress,
+      totalTopics: totalTopicsCount,
+      completedTopics: completedTopicsCount,
+      currentSkill: currSkill,
+      weakTopicsList: weakList,
+      currentTopic: currTopic
+    };
+  }, [profile]);
+
+  if (!profile) return null;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
