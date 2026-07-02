@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-12-05 - [Avoid Local State Derivation for Critical DB Writes]
+**Learning:** Replacing database SELECT queries with locally derived React state to calculate values (like progress percentages) for a subsequent UPDATE introduces a critical race condition. If the local state is stale, it will silently corrupt the database's source of truth.
+**Action:** Never use unsynchronized local state to calculate data intended to overwrite the database; always fetch the fresh source of truth from the database first, or perform atomic updates via RPC.

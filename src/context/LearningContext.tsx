@@ -302,6 +302,13 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
       if (!userId || !profile) return;
 
       try {
+        // ⚡ Bolt: Start independent fetch early to avoid network waterfall
+        const getProfilePromise = supabase
+          .from("user_learning_profiles")
+          .select("last_active_date, streak, total_xp")
+          .eq("user_id", userId)
+          .single();
+
         await supabase
           .from("user_topics")
           .update({ completed: score >= 60, score })
@@ -319,20 +326,20 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
           const newProgress = Math.round((completedCount / allTopics.length) * 100);
           const newCurrentTopicIndex = Math.min(completedCount, allTopics.length - 1);
 
-          await supabase
+          // ⚡ Bolt: Batch independent queries to avoid network waterfalls
+          const updateSkillPromise = supabase
             .from("user_skills")
             .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
             .eq("id", skillId)
             .eq("user_id", userId);
 
+          const [, { data: lpData }] = await Promise.all([
+            updateSkillPromise,
+            getProfilePromise
+          ]);
+
           // Update XP and streak — use UTC date consistently to avoid timezone drift
           const todayUTC = new Date().toISOString().split("T")[0];
-
-          const { data: lpData } = await supabase
-            .from("user_learning_profiles")
-            .select("last_active_date, streak, total_xp")
-            .eq("user_id", userId)
-            .single();
 
           if (lpData) {
             let newStreak = lpData.streak || 0;
@@ -403,7 +410,7 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         console.error("Failed to update progress:", err);
       }
     },
-    [userId]
+    [userId, profile]
   );
 
   const getActiveSkill = useCallback(() => {
