@@ -250,26 +250,33 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
 });
 
 function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
   if (a.length < b.length) [a, b] = [b, a];
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  const row = new Int32Array(n + 1);
+  for (let i = 0; i <= n; i++) row[i] = i;
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prevDiag = row[0];
+    row[0] = i;
+    const aChar = a[i - 1];
+
     for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
-      );
+      const prevDiagTemp = row[j];
+      const cost = aChar === b[j - 1] ? 0 : 1;
+
+      const insertCost = row[j - 1] + 1;
+      const deleteCost = row[j] + 1;
+      const subCost = prevDiag + cost;
+
+      row[j] = Math.min(insertCost, deleteCost, subCost);
+      prevDiag = prevDiagTemp;
     }
-    [prevRow, currRow] = [currRow, prevRow];
   }
-  return prevRow[n];
+
+  return row[n];
 }
 
 /**
