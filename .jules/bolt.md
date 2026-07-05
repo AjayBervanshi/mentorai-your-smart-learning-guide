@@ -11,3 +11,6 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-07-05 - Levenshtein Distance Optimization
+**Learning:** The Levenshtein distance algorithm used during fuzzy search in `findMatchingSkills` caused excessive memory allocations by creating new arrays (`Array.from` and `new Array`) on every iteration.
+**Action:** Replaced the algorithm with a highly optimized version using a single `Int32Array` buffer and updating the row in-place, significantly improving search speed by reducing object allocations.
