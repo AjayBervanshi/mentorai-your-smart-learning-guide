@@ -249,27 +249,31 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+const levenshteinCache = new Int32Array(256);
+
 function levenshtein(a: string, b: string): number {
   if (a.length < b.length) [a, b] = [b, a];
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  const row = n < 256 ? levenshteinCache : new Int32Array(n + 1);
+  for (let i = 0; i <= n; i++) row[i] = i;
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    let prevDiag = row[0];
+    row[0] = i;
     for (let j = 1; j <= n; j++) {
+      const prevDiagTemp = row[j];
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      row[j] = Math.min(
+        row[j] + 1,
+        row[j - 1] + 1,
+        prevDiag + cost
       );
+      prevDiag = prevDiagTemp;
     }
-    [prevRow, currRow] = [currRow, prevRow];
   }
-  return prevRow[n];
+  return row[n];
 }
 
 /**

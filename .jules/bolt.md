@@ -11,3 +11,7 @@
 ## 2024-05-18 - [Optimizing chained array passes]
 **Learning:** Consolidating sequential `.map()`, `.filter()`, and `.reduce()` chains into a single `for...of` pass reduces time complexity constant factors, but you must be careful to match the original type inference, such as using `undefined` instead of `null` when replacing `.find()`, to avoid breaking strict TypeScript expectations downstream.
 **Action:** When converting array iterators to loops for performance, explicitly declare the loop variables with the exact same types that the original array methods returned.
+## 2024-07-06 - Optimized Levenshtein Distance Calculation using Shared Int32Array Cache
+
+**Learning:** Creating new `Array` instances within deeply nested loops (like the inner loops of the Levenshtein distance algorithm which iterates per user character typed) introduces massive garbage collection pressure and allocation overhead.
+**Action:** Replace multiple ephemeral array creations with a single shared `Int32Array` cache, avoiding reallocation on every single string comparison call, substantially speeding up local filtering for typeaheads.
