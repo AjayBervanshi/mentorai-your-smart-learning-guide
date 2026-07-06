@@ -91,6 +91,7 @@ export default function ResetPassword() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="password"
+                aria-label="New password"
                 placeholder="New password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -103,6 +104,7 @@ export default function ResetPassword() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="password"
+                aria-label="Confirm new password"
                 placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
