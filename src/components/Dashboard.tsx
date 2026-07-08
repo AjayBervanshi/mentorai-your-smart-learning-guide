@@ -255,11 +255,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2" role="group" aria-label="Skill level">
                 {(["beginner", "intermediate", "advanced"] as SkillLevel[]).map((l) => (
                   <button
                     key={l}
                     onClick={() => setNewLevel(l)}
+                    aria-pressed={newLevel === l}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${
                       newLevel === l ? "gradient-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
                     }`}
