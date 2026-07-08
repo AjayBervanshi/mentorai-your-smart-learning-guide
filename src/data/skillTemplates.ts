@@ -249,27 +249,57 @@ const PREPARED_SKILL_CATEGORIES = KNOWN_SKILL_CATEGORIES.map(skill => {
   };
 });
 
+const MAX_LEN = 100;
+const prevRowCached = new Int32Array(MAX_LEN);
+const currRowCached = new Int32Array(MAX_LEN);
+
+// ⚡ Bolt: Optimized string distance computation by caching array allocations
+// and implementing early exits when minimum possible distance exceeds the maximum threshold (3).
 function levenshtein(a: string, b: string): number {
-  if (a.length < b.length) [a, b] = [b, a];
+  if (a.length < b.length) {
+    const tmp = a;
+    a = b;
+    b = tmp;
+  }
   const m = a.length, n = b.length;
   if (n === 0) return m;
 
-  let prevRow = Array.from({ length: n + 1 }, (_, i) => i);
-  let currRow = new Array(n + 1);
+  // Early return if minimum possible distance exceeds fuzzy match threshold (3)
+  if (m - n > 3) return 4;
+
+  let pRow = prevRowCached;
+  let cRow = currRowCached;
+
+  if (n >= MAX_LEN) {
+    pRow = new Int32Array(n + 1);
+    cRow = new Int32Array(n + 1);
+  }
+
+  for (let i = 0; i <= n; i++) {
+    pRow[i] = i;
+  }
 
   for (let i = 1; i <= m; i++) {
-    currRow[0] = i;
+    cRow[0] = i;
+    let minCost = i;
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      currRow[j] = Math.min(
-        currRow[j - 1] + 1,
-        prevRow[j] + 1,
-        prevRow[j - 1] + cost
+      const val = Math.min(
+        cRow[j - 1] + 1,
+        pRow[j] + 1,
+        pRow[j - 1] + cost
       );
+      cRow[j] = val;
+      if (val < minCost) minCost = val;
     }
-    [prevRow, currRow] = [currRow, prevRow];
+    // Early exit if the row's minimum cost exceeds the fuzzy match threshold
+    if (minCost > 3) return 4;
+
+    const temp = pRow;
+    pRow = cRow;
+    cRow = temp;
   }
-  return prevRow[n];
+  return pRow[n];
 }
 
 /**
