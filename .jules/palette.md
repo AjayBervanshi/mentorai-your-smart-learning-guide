@@ -4,3 +4,6 @@
 ## 2023-10-27 - [Custom Selection Accessibility]
 **Learning:** Custom selections or pseudo-radio buttons using `<button>` elements must be wrapped in a container with `role="group"` and an `aria-label`, and always include the `aria-pressed` or `aria-checked` attribute to ensure accessibility for screen reader users.
 **Action:** Always verify custom radio or toggle groups for proper ARIA roles and state attributes.
+## 2024-11-28 - [Custom Selection Accessibility]
+**Learning:** Custom selections or pseudo-radio buttons using `<button>` elements must be wrapped in a container with `role="group"` and an `aria-label`, and always include the `aria-pressed` or `aria-checked` attribute to ensure accessibility for screen reader users.
+**Action:** Always verify custom radio or toggle groups for proper ARIA roles and state attributes.
