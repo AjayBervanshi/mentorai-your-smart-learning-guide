@@ -14,3 +14,6 @@
 ## 2025-03-01 - Optimized Levenshtein algorithm with Int32Array and Early Exits
 **Learning:** During string matching over large datasets, the naive dynamic programming approach for Levenshtein allocates `O(m)` new arrays resulting in `O(m * n)` iterations. The array allocations cause high GC pressure, and without bounds checking it calculates costs that are functionally irrelevant for fuzzy search where `threshold <= 3`.
 **Action:** When writing sequence alignment or string distance functions, use a module-level cached `Int32Array` instead of runtime `Array.from()`, and aggressively early-exit when partial distances strictly exceed the search domain threshold to transform `O(m * n)` calculations into a worst-case of `O(n * threshold)`.
+## 2024-10-26 - Memoizing Derived Data Alongside Form State
+**Learning:** In components like `Dashboard` that combine complex derived calculations (like iterating over all skills/topics) with frequently updating form state (like text inputs), the main thread can be blocked on every keystroke if the derived data isn't memoized.
+**Action:** Always wrap expensive O(N) array calculations in `useMemo` when the component also manages text input state to prevent typing latency and unnecessary recalculations. Ensure the hook is called before any early returns.
