@@ -28,3 +28,8 @@
 **Vulnerability:** The `generate-content` Edge Function passed user-provided parameters (`skill`, `topic`, `subtopics`) directly into AI prompts without length limits or strict schema validation. This allowed potential prompt injection or denial-of-service (DoS) attacks via massive inputs.
 **Learning:** When passing user input to AI generation APIs or edge functions, implicit type assumptions are dangerous and can lead to excessive resource consumption or prompt manipulation.
 **Prevention:** Always implement strict schema validation, including explicit type checks, length bounds, and allowlists, before passing input to AI models or database queries.
+
+## 2024-05-23 - Prevent Information Leakage in Edge Functions
+**Vulnerability:** Supabase Edge Function `generate-content` exposes internal server errors directly to the client via `e.message` in the HTTP response. If configuration fails (e.g. `LOVABLE_API_KEY not configured`), this internal state is leaked.
+**Learning:** Returning raw error messages from the catch block in API endpoints can expose sensitive configuration, stack traces, or logic details to potential attackers.
+**Prevention:** Always catch and log detailed errors on the server side (`console.error`), but return a generic error message like 'An internal server error occurred' to the client.
