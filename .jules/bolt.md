@@ -14,3 +14,7 @@
 ## 2025-03-01 - Optimized Levenshtein algorithm with Int32Array and Early Exits
 **Learning:** During string matching over large datasets, the naive dynamic programming approach for Levenshtein allocates `O(m)` new arrays resulting in `O(m * n)` iterations. The array allocations cause high GC pressure, and without bounds checking it calculates costs that are functionally irrelevant for fuzzy search where `threshold <= 3`.
 **Action:** When writing sequence alignment or string distance functions, use a module-level cached `Int32Array` instead of runtime `Array.from()`, and aggressively early-exit when partial distances strictly exceed the search domain threshold to transform `O(m * n)` calculations into a worst-case of `O(n * threshold)`.
+
+## 2025-03-08 - React State Calculations vs UI thread blocking
+**Learning:** Complex state derivations running sequentially in the main render thread can cause UI locking, particularly when reacting to rapid events like keystrokes.
+**Action:** In React components that combine expensive derived calculations (e.g., O(N) array processing) with frequently updating local state (e.g., text inputs), always wrap the calculations in `useMemo` to prevent main thread blocking and typing latency on every keystroke.
