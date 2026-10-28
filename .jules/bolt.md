@@ -14,3 +14,7 @@
 ## 2025-03-01 - Optimized Levenshtein algorithm with Int32Array and Early Exits
 **Learning:** During string matching over large datasets, the naive dynamic programming approach for Levenshtein allocates `O(m)` new arrays resulting in `O(m * n)` iterations. The array allocations cause high GC pressure, and without bounds checking it calculates costs that are functionally irrelevant for fuzzy search where `threshold <= 3`.
 **Action:** When writing sequence alignment or string distance functions, use a module-level cached `Int32Array` instead of runtime `Array.from()`, and aggressively early-exit when partial distances strictly exceed the search domain threshold to transform `O(m * n)` calculations into a worst-case of `O(n * threshold)`.
+
+## 2024-05-20 - [Fix typeof Parsing Error]
+**Learning:** In TypeScript, avoid using optional chaining inside a `typeof` type annotation (e.g., `typeof obj?.prop[0]`), as this causes ESLint parsing errors (`Parsing error: ',' expected`).
+**Action:** Instead, extract the type using bracket notation (e.g., `(typeof obj)['prop'][0] | undefined`).
