@@ -216,7 +216,7 @@ Return JSON array:
 
   } catch (e) {
     console.error("generate-content error:", e instanceof Error ? e.message : "Unknown error");
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "An internal server error occurred" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
