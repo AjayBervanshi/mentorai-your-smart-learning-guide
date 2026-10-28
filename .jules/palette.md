@@ -4,3 +4,7 @@
 ## 2023-10-27 - [Custom Selection Accessibility]
 **Learning:** Custom selections or pseudo-radio buttons using `<button>` elements must be wrapped in a container with `role="group"` and an `aria-label`, and always include the `aria-pressed` or `aria-checked` attribute to ensure accessibility for screen reader users.
 **Action:** Always verify custom radio or toggle groups for proper ARIA roles and state attributes.
+## 2024-10-28 - Pseudo-Radio Button Groups
+
+**Learning:** When building custom toggle button lists that act as mutually exclusive selections (like radio buttons), relying solely on visual cues or generic \`<button>\` roles leaves screen readers without context of the group or the selected state.
+**Action:** Always wrap these custom toggle lists in a container with \`role="group"\` and an \`aria-label\`.  Crucially, add the \`aria-pressed\` attribute to the individual buttons to explicitly communicate which option is currently selected to assistive technologies.
