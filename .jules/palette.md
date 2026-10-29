@@ -8,3 +8,6 @@
 
 **Learning:** When building custom toggle button lists that act as mutually exclusive selections (like radio buttons), relying solely on visual cues or generic \`<button>\` roles leaves screen readers without context of the group or the selected state.
 **Action:** Always wrap these custom toggle lists in a container with \`role="group"\` and an \`aria-label\`.  Crucially, add the \`aria-pressed\` attribute to the individual buttons to explicitly communicate which option is currently selected to assistive technologies.
+## 2024-10-29 - Destructive Action Confirmation
+**Learning:** Adding a confirmation dialog before deleting user data prevents accidental loss, especially when the delete button appears on hover in a dense UI list where misclicks are common.
+**Action:** Always add a confirmation step (via dialog or `window.confirm`) for destructive actions like deleting a project, skill, or account.
