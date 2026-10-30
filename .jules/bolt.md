@@ -18,3 +18,7 @@
 ## 2024-05-20 - [Fix typeof Parsing Error]
 **Learning:** In TypeScript, avoid using optional chaining inside a `typeof` type annotation (e.g., `typeof obj?.prop[0]`), as this causes ESLint parsing errors (`Parsing error: ',' expected`).
 **Action:** Instead, extract the type using bracket notation (e.g., `(typeof obj)['prop'][0] | undefined`).
+
+## 2024-05-20 - [Batch Supabase Queries & Avoid Empty Types in Promise.all]
+**Learning:** When pushing independent Supabase queries to an array to be executed with `Promise.all()`, relying on implicit union types can cause TypeScript parsing errors like `Unexpected any` if the `.push()` uses a type not inferred during array initialization.
+**Action:** When initializing an array of Supabase queries intended for `Promise.all()`, explicitly type it as `PromiseLike<any>[]` (and use `eslint-disable-next-line` if needed) to ensure that pushing differently-typed table operations does not trigger linter errors.

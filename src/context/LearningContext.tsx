@@ -302,65 +302,81 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
       if (!userId || !profile) return;
 
       try {
-        await supabase
-          .from("user_topics")
-          .update({ completed: score >= 60, score })
-          .eq("id", topicId)
-          .eq("user_id", userId);
+        const targetSkill = profile.skills.find(s => s.id === skillId);
+        if (!targetSkill) return;
 
-        const { data: allTopics } = await supabase
-          .from("user_topics")
-          .select("*")
-          .eq("skill_id", skillId)
-          .eq("user_id", userId);
+        const isCompleted = score >= 60;
+        let completedCount = 0;
+        const totalTopics = targetSkill.topics.length;
 
-        if (allTopics) {
-          const completedCount = allTopics.filter((t) => t.completed).length;
-          const newProgress = Math.round((completedCount / allTopics.length) * 100);
-          const newCurrentTopicIndex = Math.min(completedCount, allTopics.length - 1);
-
-          await supabase
-            .from("user_skills")
-            .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
-            .eq("id", skillId)
-            .eq("user_id", userId);
-
-          // Update XP and streak — use UTC date consistently to avoid timezone drift
-          const todayUTC = new Date().toISOString().split("T")[0];
-
-          const { data: lpData } = await supabase
-            .from("user_learning_profiles")
-            .select("last_active_date, streak, total_xp")
-            .eq("user_id", userId)
-            .single();
-
-          if (lpData) {
-            let newStreak = lpData.streak || 0;
-            const lastDate = lpData.last_active_date;
-
-            if (lastDate !== todayUTC) {
-              const yesterday = new Date();
-              yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-              const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-              if (lastDate === yesterdayStr) {
-                newStreak += 1;
-              } else if (!lastDate) {
-                newStreak = 1;
-              } else {
-                newStreak = 1; // reset
-              }
+        for (const t of targetSkill.topics) {
+            if (t.id === topicId) {
+                if (isCompleted) completedCount++;
+            } else {
+                if (t.completed) completedCount++;
             }
+        }
 
-            await supabase
+        const newProgress = totalTopics > 0 ? Math.round((completedCount / totalTopics) * 100) : 0;
+        const newCurrentTopicIndex = totalTopics > 0 ? Math.min(completedCount, totalTopics - 1) : 0;
+
+        // Update XP and streak — use UTC date consistently to avoid timezone drift
+        const todayUTC = new Date().toISOString().split("T")[0];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const updatePromises: PromiseLike<any>[] = [
+            supabase
+              .from("user_topics")
+              .update({ completed: isCompleted, score })
+              .eq("id", topicId)
+              .eq("user_id", userId),
+            supabase
+              .from("user_skills")
+              .update({ progress: newProgress, current_topic_index: newCurrentTopicIndex })
+              .eq("id", skillId)
+              .eq("user_id", userId)
+        ];
+
+        const { data: lpData } = await supabase
+          .from("user_learning_profiles")
+          .select("last_active_date, streak, total_xp")
+          .eq("user_id", userId)
+          .single();
+
+        let newStreak = 0;
+        if (lpData) {
+          newStreak = lpData.streak || 0;
+          const lastDate = lpData.last_active_date;
+
+          if (lastDate !== todayUTC) {
+            const yesterday = new Date();
+            yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+            if (lastDate === yesterdayStr) {
+              newStreak += 1;
+            } else if (!lastDate) {
+              newStreak = 1;
+            } else {
+              newStreak = 1; // reset
+            }
+          }
+
+          updatePromises.push(
+            supabase
               .from("user_learning_profiles")
               .update({
                 total_xp: (lpData.total_xp || 0) + score,
                 streak: newStreak,
                 last_active_date: todayUTC,
               })
-              .eq("user_id", userId);
+              .eq("user_id", userId)
+          );
+        }
 
+        await Promise.all(updatePromises);
+
+        if (lpData) {
             // Update local state
             setProfile((prev) => {
               if (!prev) return prev;
@@ -398,7 +414,6 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
               return { ...prev, skills, totalXP: (lpData.total_xp || 0) + score, streak: newStreak };
             });
           }
-        }
       } catch (err) {
         console.error("Failed to update progress:", err);
       }
