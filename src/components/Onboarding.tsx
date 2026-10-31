@@ -119,6 +119,7 @@ export default function Onboarding() {
                 </div>
                 <div className="space-y-3">
                   <Input
+                    aria-label="Your name"
                     placeholder="e.g. Alex"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}

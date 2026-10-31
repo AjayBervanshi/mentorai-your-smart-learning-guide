@@ -11,3 +11,6 @@
 ## 2024-10-29 - Destructive Action Confirmation
 **Learning:** Adding a confirmation dialog before deleting user data prevents accidental loss, especially when the delete button appears on hover in a dense UI list where misclicks are common.
 **Action:** Always add a confirmation step (via dialog or `window.confirm`) for destructive actions like deleting a project, skill, or account.
+## 2024-10-31 - Missing aria-label for placeholder-only input
+**Learning:** Input fields that rely entirely on placeholder text without an associated visible `<label>` lack accessible names for screen reader users, violating accessibility guidelines.
+**Action:** Always provide an `aria-label` attribute describing the input's purpose when using placeholder-only `<Input>` components.
