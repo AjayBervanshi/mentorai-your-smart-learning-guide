@@ -142,6 +142,7 @@ export default function Auth() {
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="email"
+              aria-label="Email address"
               placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -155,6 +156,7 @@ export default function Auth() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   type={showPassword ? "text" : "password"}
+                  aria-label="Password"
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
