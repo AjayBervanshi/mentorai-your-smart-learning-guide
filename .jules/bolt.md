@@ -22,3 +22,7 @@
 ## 2024-05-20 - [Batch Supabase Queries & Avoid Empty Types in Promise.all]
 **Learning:** When pushing independent Supabase queries to an array to be executed with `Promise.all()`, relying on implicit union types can cause TypeScript parsing errors like `Unexpected any` if the `.push()` uses a type not inferred during array initialization.
 **Action:** When initializing an array of Supabase queries intended for `Promise.all()`, explicitly type it as `PromiseLike<any>[]` (and use `eslint-disable-next-line` if needed) to ensure that pushing differently-typed table operations does not trigger linter errors.
+
+## 2024-06-25 - [Batch Independent Supabase Queries in Loops]
+**Learning:** A sequential `for...of` loop executing independent Supabase database operations (e.g., `.from().insert()`) creates a network waterfall, significantly delaying user operations like onboarding where multiple skills are added simultaneously.
+**Action:** To optimize performance and avoid network waterfalls, always batch independent Supabase queries (e.g., inside a loop) using `Promise.all()` to execute them concurrently rather than awaiting them sequentially.
