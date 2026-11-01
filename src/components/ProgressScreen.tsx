@@ -80,11 +80,15 @@ export default function ProgressScreen() {
           </h2>
           <div className="space-y-3">
             {profile.skills.map((skill) => {
-              const scored = skill.topics.filter((t) => t.score !== undefined);
-              const avg =
-                scored.length > 0
-                  ? Math.round(scored.reduce((sum, t) => sum + (t.score ?? 0), 0) / scored.length)
-                  : null;
+              let sum = 0;
+              let count = 0;
+              for (const t of skill.topics) {
+                if (t.score !== undefined) {
+                  sum += t.score;
+                  count++;
+                }
+              }
+              const avg = count > 0 ? Math.round(sum / count) : null;
               return (
                 <div key={skill.id} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
