@@ -444,7 +444,7 @@ export default function LearningScreen() {
             <div className="glass-card p-5 space-y-4">
               <h3 className="font-semibold text-foreground">{currentQ.question}</h3>
 
-              <div className="space-y-2">
+              <div className="space-y-2" role="group" aria-label="Quiz options">
                 {currentQ.options.map((opt, i) => {
                   const isSelected = selectedAnswer === i;
                   const isCorrect = i === currentQ.correctIndex;
@@ -455,7 +455,8 @@ export default function LearningScreen() {
                       key={i}
                       onClick={() => selectedAnswer === null && handleAnswer(i)}
                       disabled={selectedAnswer !== null}
-                      className={`w-full text-left p-3 rounded-lg text-sm transition-all flex items-center gap-3 ${
+                      aria-pressed={isSelected}
+                      className={`w-full text-left p-3 rounded-lg text-sm transition-all flex items-center gap-3 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none ${
                         showResult
                           ? isCorrect ? "bg-primary/20 ring-1 ring-primary"
                           : isSelected ? "bg-destructive/20 ring-1 ring-destructive"
