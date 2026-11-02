@@ -329,17 +329,21 @@ export function normalizeSkillName(input: string): string | null {
   let bestMatch: string | null = null;
   let bestDist = Infinity;
 
+  const threshold = lower.length > 6 ? 3 : 2;
+
   for (const skillObj of PREPARED_SKILL_CATEGORIES) {
     const dist = levenshtein(lower, skillObj.lower);
-    const distClean = levenshtein(clean, skillObj.clean);
-    const minDist = Math.min(dist, distClean);
+    // ⚡ Bolt: Optimize by skipping second levenshtein and early returning on perfect matches
+    const minDist = dist === 0 ? 0 : Math.min(dist, levenshtein(clean, skillObj.clean));
+
     if (minDist < bestDist) {
       bestDist = minDist;
       bestMatch = skillObj.original;
+      // Short-circuit if perfect match is found, no need to keep searching
+      if (bestDist === 0) break;
     }
   }
 
-  const threshold = lower.length > 6 ? 3 : 2;
   if (bestMatch && bestDist <= threshold) {
     return bestMatch;
   }
