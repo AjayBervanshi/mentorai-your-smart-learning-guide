@@ -283,10 +283,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </AnimatePresence>
 
         {profile.skills.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-8 text-center space-y-3">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-8 text-center space-y-3 flex flex-col items-center">
             <BookOpen className="w-10 h-10 text-muted-foreground mx-auto" />
             <p className="text-foreground font-medium">No skills added yet</p>
-            <p className="text-sm text-muted-foreground">Tap "Add Skill" above to start your learning journey</p>
+            <p className="text-sm text-muted-foreground mb-4">Add a skill to start your learning journey</p>
+            <Button onClick={() => setShowAddSkill(true)} className="gradient-primary text-primary-foreground gap-2">
+              <Plus className="w-4 h-4" /> Add Skill
+            </Button>
           </motion.div>
         ) : (
           profile.skills.map((skill, i) => {
