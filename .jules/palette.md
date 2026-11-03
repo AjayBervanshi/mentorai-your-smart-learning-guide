@@ -14,3 +14,6 @@
 ## 2024-10-31 - Missing aria-label for placeholder-only input
 **Learning:** Input fields that rely entirely on placeholder text without an associated visible `<label>` lack accessible names for screen reader users, violating accessibility guidelines.
 **Action:** Always provide an `aria-label` attribute describing the input's purpose when using placeholder-only `<Input>` components.
+## 2024-11-03 - Empty States Need Direct Actions
+**Learning:** Text-only empty states that direct users to find a button elsewhere (e.g. "Tap Add Skill above") cause unnecessary friction and confusion. Users expect the primary action to be available directly within the empty state itself.
+**Action:** Always include a direct, clickable call-to-action button inside empty state containers instead of providing textual directions.
