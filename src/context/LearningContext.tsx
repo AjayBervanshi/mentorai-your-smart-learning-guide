@@ -135,53 +135,61 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         });
         if (lpError) throw lpError;
 
-        const userSkills: UserSkill[] = await Promise.all(
-          skills.map(async (s) => {
-            const { data: skillData, error: skillError } = await supabase
-              .from("user_skills")
-              .insert({ user_id: userId, name: s.name, level: s.level })
-              .select()
-              .single();
-            if (skillError) throw skillError;
+        // ⚡ Bolt: Bulk insert skills instead of parallel sequential inserts
+        const skillInserts = skills.map((s) => ({ user_id: userId, name: s.name, level: s.level }));
+        const { data: skillsData, error: skillsError } = await supabase
+          .from("user_skills")
+          .insert(skillInserts)
+          .select();
+        if (skillsError || !skillsData) throw skillsError || new Error("No skills returned");
 
-            const topicTemplates = getTopicsForSkill(s.name, s.level);
-            const topicInserts = topicTemplates.map((t, i) => ({
-              skill_id: skillData.id,
+        // Prepare bulk topic inserts for all skills
+        const allTopicInserts = [];
+        for (const skill of skillsData) {
+          const topicTemplates = getTopicsForSkill(skill.name, skill.level as SkillLevel);
+          topicTemplates.forEach((t, i) => {
+            allTopicInserts.push({
+              skill_id: skill.id,
               user_id: userId,
               title: t.title,
               description: t.description,
               level: t.level,
               sort_order: i,
               subtopics: t.subtopics,
-            }));
+            });
+          });
+        }
 
-            const { data: topicData, error: topicError } = await supabase
-              .from("user_topics")
-              .insert(topicInserts)
-              .select();
-            if (topicError) throw topicError;
+        const { data: topicsData, error: topicsError } = await supabase
+          .from("user_topics")
+          .insert(allTopicInserts)
+          .select();
+        if (topicsError) throw topicsError;
 
-            const topics: Topic[] = (topicData || []).map((t) => ({
-              id: t.id,
-              title: t.title,
-              description: t.description || "",
-              level: t.level as SkillLevel,
-              completed: false,
-              subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
-            }));
+        // Group topics by skill id locally
+        const topicsBySkillId: Record<string, Topic[]> = {};
+        for (const t of (topicsData || [])) {
+          if (!topicsBySkillId[t.skill_id]) topicsBySkillId[t.skill_id] = [];
+          topicsBySkillId[t.skill_id].push({
+            id: t.id,
+            title: t.title,
+            description: t.description || "",
+            level: t.level as SkillLevel,
+            completed: false,
+            subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+          });
+        }
 
-            return {
-              id: skillData.id,
-              name: s.name,
-              level: s.level,
-              progress: 0,
-              currentTopicIndex: 0,
-              weakTopics: [],
-              completedTopics: [],
-              topics,
-            };
-          })
-        );
+        const userSkills: UserSkill[] = skillsData.map((skill) => ({
+          id: skill.id,
+          name: skill.name,
+          level: skill.level as SkillLevel,
+          progress: 0,
+          currentTopicIndex: 0,
+          weakTopics: [],
+          completedTopics: [],
+          topics: topicsBySkillId[skill.id] || [],
+        }));
 
         setProfile({
           skills: userSkills,
