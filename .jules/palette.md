@@ -14,3 +14,6 @@
 ## 2024-10-31 - Missing aria-label for placeholder-only input
 **Learning:** Input fields that rely entirely on placeholder text without an associated visible `<label>` lack accessible names for screen reader users, violating accessibility guidelines.
 **Action:** Always provide an `aria-label` attribute describing the input's purpose when using placeholder-only `<Input>` components.
+## 2024-11-04 - Keyboard Accessibility in Interactive Cards
+**Learning:** In highly interactive dashboards, standard custom `<button>` elements used as cards (like "Weak topics", "Skills", and "Quick Actions") often lack focus indicators because standard browser outlines are usually suppressed or don't match the design system.
+**Action:** Always ensure interactive structural components like custom card buttons have explicit `focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none` styles so they remain accessible via keyboard navigation without relying purely on hover effects.
