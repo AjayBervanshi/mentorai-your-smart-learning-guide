@@ -181,7 +181,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   setActiveSkillId(skill.id);
                   onNavigate("learn");
                 }}
-                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors"
+                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-secondary/40 hover:bg-secondary/70 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-foreground truncate">{topic.title}</div>
@@ -301,7 +301,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   setActiveSkillId(skill.id);
                   onNavigate("learn");
                 }}
-                className="w-full glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group"
+                className="w-full glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all group"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -342,14 +342,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => onNavigate("projects")} className="glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group">
+        <button onClick={() => onNavigate("projects")} className="glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all group">
           <div className="w-8 h-8 rounded-lg gradient-accent flex items-center justify-center mb-2">
             <span className="text-sm">🛠</span>
           </div>
           <div className="text-sm font-semibold text-foreground">Projects</div>
           <div className="text-xs text-muted-foreground">Build real things</div>
         </button>
-        <button onClick={() => onNavigate("interview")} className="glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group">
+        <button onClick={() => onNavigate("interview")} className="glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none transition-all group">
           <div className="w-8 h-8 rounded-lg gradient-warm flex items-center justify-center mb-2">
             <span className="text-sm">🎤</span>
           </div>
