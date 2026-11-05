@@ -181,7 +181,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   setActiveSkillId(skill.id);
                   onNavigate("learn");
                 }}
-                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors"
+                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-secondary/40 hover:bg-secondary/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-foreground truncate">{topic.title}</div>
@@ -218,7 +218,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Your Skills</h2>
           <button
             onClick={() => setShowAddSkill(!showAddSkill)}
-            className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+            className="flex items-center gap-1 text-xs text-primary hover:underline font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
           >
             <Plus className="w-3.5 h-3.5" /> Add Skill
           </button>
@@ -229,7 +229,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="glass-card p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">Add a new skill</span>
-                <button aria-label="Close add skill form" onClick={() => setShowAddSkill(false)} className="text-muted-foreground hover:text-foreground">
+                <button aria-label="Close add skill form" onClick={() => setShowAddSkill(false)} className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -301,7 +301,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   setActiveSkillId(skill.id);
                   onNavigate("learn");
                 }}
-                className="w-full glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group"
+                className="w-full glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -322,7 +322,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                           removeSkill(skill.id).then(() => toast.success(`${skill.name} removed`)).catch(() => toast.error("Failed to remove skill"));
                         }
                       }}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100"
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -342,14 +342,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
       {/* Quick actions */}
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => onNavigate("projects")} className="glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group">
+        <button onClick={() => onNavigate("projects")} className="glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <div className="w-8 h-8 rounded-lg gradient-accent flex items-center justify-center mb-2">
             <span className="text-sm">🛠</span>
           </div>
           <div className="text-sm font-semibold text-foreground">Projects</div>
           <div className="text-xs text-muted-foreground">Build real things</div>
         </button>
-        <button onClick={() => onNavigate("interview")} className="glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group">
+        <button onClick={() => onNavigate("interview")} className="glass-card p-4 text-left hover:ring-1 hover:ring-primary/30 transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <div className="w-8 h-8 rounded-lg gradient-warm flex items-center justify-center mb-2">
             <span className="text-sm">🎤</span>
           </div>
