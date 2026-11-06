@@ -135,53 +135,63 @@ export function LearningProvider({ children, userId }: { children: React.ReactNo
         });
         if (lpError) throw lpError;
 
-        const userSkills: UserSkill[] = await Promise.all(
-          skills.map(async (s) => {
-            const { data: skillData, error: skillError } = await supabase
-              .from("user_skills")
-              .insert({ user_id: userId, name: s.name, level: s.level })
-              .select()
-              .single();
-            if (skillError) throw skillError;
+        const skillInserts = skills.map(s => ({
+          user_id: userId,
+          name: s.name,
+          level: s.level,
+        }));
 
-            const topicTemplates = getTopicsForSkill(s.name, s.level);
-            const topicInserts = topicTemplates.map((t, i) => ({
-              skill_id: skillData.id,
-              user_id: userId,
-              title: t.title,
-              description: t.description,
-              level: t.level,
-              sort_order: i,
-              subtopics: t.subtopics,
-            }));
+        const { data: insertedSkills, error: skillsError } = await supabase
+          .from("user_skills")
+          .insert(skillInserts)
+          .select();
 
-            const { data: topicData, error: topicError } = await supabase
-              .from("user_topics")
-              .insert(topicInserts)
-              .select();
-            if (topicError) throw topicError;
+        if (skillsError) throw skillsError;
+        if (!insertedSkills) throw new Error("No skills returned");
 
-            const topics: Topic[] = (topicData || []).map((t) => ({
-              id: t.id,
-              title: t.title,
-              description: t.description || "",
-              level: t.level as SkillLevel,
-              completed: false,
-              subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
-            }));
+        const allTopicInserts = [];
+        for (const s of insertedSkills) {
+          const topicTemplates = getTopicsForSkill(s.name, s.level as SkillLevel);
+          allTopicInserts.push(...topicTemplates.map((t, i) => ({
+            skill_id: s.id,
+            user_id: userId,
+            title: t.title,
+            description: t.description,
+            level: t.level,
+            sort_order: i,
+            subtopics: t.subtopics,
+          })));
+        }
 
-            return {
-              id: skillData.id,
-              name: s.name,
-              level: s.level,
-              progress: 0,
-              currentTopicIndex: 0,
-              weakTopics: [],
-              completedTopics: [],
-              topics,
-            };
-          })
-        );
+        const { data: insertedTopics, error: topicsError } = await supabase
+          .from("user_topics")
+          .insert(allTopicInserts)
+          .select();
+
+        if (topicsError) throw topicsError;
+
+        const userSkills: UserSkill[] = insertedSkills.map((s) => {
+          const skillTopicsData = (insertedTopics || []).filter(t => t.skill_id === s.id);
+          const topics: Topic[] = skillTopicsData.map(t => ({
+            id: t.id,
+            title: t.title,
+            description: t.description || "",
+            level: t.level as SkillLevel,
+            completed: false,
+            subtopics: t.subtopics || ["Concept", "Examples", "Practice", "Quiz"],
+          }));
+
+          return {
+            id: s.id,
+            name: s.name,
+            level: s.level as SkillLevel,
+            progress: 0,
+            currentTopicIndex: 0,
+            weakTopics: [],
+            completedTopics: [],
+            topics,
+          };
+        });
 
         setProfile({
           skills: userSkills,
