@@ -322,7 +322,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                           removeSkill(skill.id).then(() => toast.success(`${skill.name} removed`)).catch(() => toast.error("Failed to remove skill"));
                         }
                       }}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100"
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
