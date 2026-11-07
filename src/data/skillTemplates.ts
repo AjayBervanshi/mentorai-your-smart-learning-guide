@@ -368,19 +368,28 @@ export function findMatchingSkills(input: string): string[] {
 
   if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
-    .sort((a, b) => a.dist - b.dist)
-    .map((x) => x.skill);
+  const fuzzy: { skill: string; dist: number }[] = [];
 
-  return fuzzy.slice(0, 8);
+  // ⚡ Bolt: Consolidated .map().filter() chain into a single pass to eliminate intermediate object allocations
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    const dist1 = levenshtein(normalized, skillObj.lower);
+    let minD = dist1;
+
+    // ⚡ Bolt: Skip the second expensive levenshtein calculation if the first is already an exact match (0)
+    if (minD > 0) {
+      const dist2 = levenshtein(clean, skillObj.clean);
+      if (dist2 < minD) {
+        minD = dist2;
+      }
+    }
+
+    if (minD <= 3) {
+      fuzzy.push({ skill: skillObj.original, dist: minD });
+    }
+  }
+
+  fuzzy.sort((a, b) => a.dist - b.dist);
+  return fuzzy.slice(0, 8).map((x) => x.skill);
 }
 
 export function isValidSkill(input: string): boolean {
