@@ -333,13 +333,13 @@ export function normalizeSkillName(input: string): string | null {
 
   for (const skillObj of PREPARED_SKILL_CATEGORIES) {
     const dist = levenshtein(lower, skillObj.lower);
-    // ⚡ Bolt: Optimize by skipping second levenshtein and early returning on perfect matches
-    const minDist = dist === 0 ? 0 : Math.min(dist, levenshtein(clean, skillObj.clean));
+    // Note: dist === 0 is unreachable here because exact matches are returned early above.
+    const minDist = Math.min(dist, levenshtein(clean, skillObj.clean));
 
     if (minDist < bestDist) {
       bestDist = minDist;
       bestMatch = skillObj.original;
-      // Short-circuit if perfect match is found, no need to keep searching
+      // Short-circuit if perfect match is found via cleaned string
       if (bestDist === 0) break;
     }
   }
@@ -360,27 +360,35 @@ export function findMatchingSkills(input: string): string[] {
   if (normalized.length < 2) return [];
   const clean = normalized.replace(SKILL_NAME_CLEAN_REGEX, "");
 
-  const substringMatches = PREPARED_SKILL_CATEGORIES.filter(
-    (skillObj) =>
-      skillObj.lower.includes(normalized) ||
-      normalized.includes(skillObj.lower)
-  );
+  // ⚡ Bolt: Optimized array processing to avoid intermediate allocations
+  // by using a for-loop and allowing early exit for substring matches.
+  const substringMatches: string[] = [];
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    if (skillObj.lower.includes(normalized) || normalized.includes(skillObj.lower)) {
+      substringMatches.push(skillObj.original);
+      if (substringMatches.length >= 8) break;
+    }
+  }
 
-  if (substringMatches.length > 0) return substringMatches.slice(0, 8).map(s => s.original);
+  if (substringMatches.length > 0) return substringMatches;
 
-  const fuzzy = PREPARED_SKILL_CATEGORIES
-    .map((skillObj) => ({
-      skill: skillObj.original,
-      dist: Math.min(
-        levenshtein(normalized, skillObj.lower),
-        levenshtein(clean, skillObj.clean)
-      ),
-    }))
-    .filter((x) => x.dist <= 3)
+  // ⚡ Bolt: Consolidated .map().filter() into a single for-loop to avoid intermediate array allocations
+  const fuzzy: { skill: string; dist: number }[] = [];
+  for (const skillObj of PREPARED_SKILL_CATEGORIES) {
+    const dist = Math.min(
+      levenshtein(normalized, skillObj.lower),
+      levenshtein(clean, skillObj.clean)
+    );
+
+    if (dist <= 3) {
+      fuzzy.push({ skill: skillObj.original, dist });
+    }
+  }
+
+  return fuzzy
     .sort((a, b) => a.dist - b.dist)
+    .slice(0, 8)
     .map((x) => x.skill);
-
-  return fuzzy.slice(0, 8);
 }
 
 export function isValidSkill(input: string): boolean {
