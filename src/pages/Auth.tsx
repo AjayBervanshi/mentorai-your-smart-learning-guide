@@ -28,7 +28,8 @@ export default function Auth() {
         toast.success("Check your email for the reset link!");
         setMode("login");
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : "Failed to send reset email");
+        console.error("Password reset error:", err);
+        toast.error("Failed to send reset email. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -63,7 +64,8 @@ export default function Auth() {
         if (error) throw error;
       }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Authentication failed");
+      console.error("Authentication error:", err);
+      toast.error("Authentication failed. Please check your credentials.");
     } finally {
       setLoading(false);
     }
@@ -82,7 +84,8 @@ export default function Auth() {
       }
       if (result.redirected) return;
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Google sign-in failed");
+      console.error("Google sign-in error:", err);
+      toast.error("Google sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
