@@ -51,7 +51,8 @@ export default function ResetPassword() {
       toast.success("Password updated successfully!");
       setTimeout(() => navigate("/"), 2000);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update password");
+      console.error("Password update error:", err);
+      toast.error("Failed to update password. Please try again.");
     } finally {
       setLoading(false);
     }
