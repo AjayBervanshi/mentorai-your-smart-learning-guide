@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { FolderKanban, Star, Lock, ExternalLink } from "lucide-react";
 import { useLearning } from "@/context/LearningContext";
@@ -5,6 +6,23 @@ import { getProjectsForSkill } from "@/data/skillTemplates";
 
 export default function ProjectsScreen() {
   const { profile } = useLearning();
+
+  // ⚡ Bolt: Memoized derived project calculations and optimized unlocked count
+  // to avoid O(N) array allocations from .filter() on every render.
+  const projectsData = useMemo(() => {
+    if (!profile?.skills) return [];
+    return profile.skills.map(skill => {
+      const projects = getProjectsForSkill(skill.name);
+      let unlockedCount = 0;
+      for (let i = 0; i < projects.length; i++) {
+        if (skill.progress >= projects[i].minProgress) {
+          unlockedCount++;
+        }
+      }
+      return { skill, projects, unlockedCount };
+    });
+  }, [profile?.skills]);
+
   if (!profile) return null;
 
   return (
@@ -21,9 +39,7 @@ export default function ProjectsScreen() {
           <p className="text-sm text-muted-foreground">Add skills from the dashboard to see project ideas</p>
         </div>
       ) : (
-        profile.skills.map((skill) => {
-          const projects = getProjectsForSkill(skill.name);
-          const unlockedCount = projects.filter(p => skill.progress >= p.minProgress).length;
+        projectsData.map(({ skill, projects, unlockedCount }) => {
           return (
             <div key={skill.id} className="space-y-3">
               <div className="flex items-center justify-between">
