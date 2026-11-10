@@ -78,7 +78,8 @@ export default function LearningScreen() {
         throw new Error("Invalid content received");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to generate content";
+      console.error("Content generation error:", err);
+      const msg = "Failed to generate content";
       setLoadError(msg);
       toast.error("Failed to generate content. Tap retry to try again.");
     } finally {
