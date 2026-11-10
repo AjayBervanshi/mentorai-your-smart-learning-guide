@@ -30,3 +30,6 @@
 ## 2024-03-24 - Short-Circuiting Levenshtein Needs Exact Match Evaluation
 **Learning:** When attempting to optimize fuzzy matching (Levenshtein distance) by short-circuiting on exact matches (`dist === 0`), ensure the optimization is placed in a code path where exact matches actually reach. If an earlier step (like a substring match) already returns early for exact matches, the `dist === 0` check in the fuzzy fallback will become unreachable dead code. However, applying this optimization in contexts where it *is* reachable (e.g., in a standalone normalization loop) correctly yields performance benefits by skipping unnecessary string evaluations for perfect hits.
 **Action:** Before optimizing fallback algorithms to short-circuit on exact matches, rigorously trace the control flow to verify that exact matches haven't already been handled by preceding code (e.g., substring match early-returns).
+## 2024-11-10 - O(N) Array processing and useMemo optimization
+**Learning:** Chaining array methods like .filter().length inside a render loop's mapping function creates unnecessary intermediate array allocations, reducing performance during re-renders.
+**Action:** Replace .filter() with an O(N) loop and wrap the entire derived calculation in useMemo to memoize static lookups.
