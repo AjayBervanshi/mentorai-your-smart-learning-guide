@@ -33,3 +33,8 @@
 **Vulnerability:** Supabase Edge Functions were returning raw error details (`e.message`) directly in HTTP 500 responses. This could leak sensitive internal details like database structure, API failures, or logic details to clients.
 **Learning:** Returning detailed backend exception messages to clients violates the principle of failing securely. While raw errors are useful for internal logs, HTTP responses should provide generic error messages to prevent information exposure.
 **Prevention:** In Supabase Edge Functions, prevent information leakage by returning generic error messages (e.g., 'An internal server error occurred') in HTTP responses instead of exposing raw error details like `e.message` or stack traces.
+
+## 2025-03-05 - Information Leakage in Auth Error Messages
+**Vulnerability:** In the `src/pages/Auth.tsx` and `src/pages/ResetPassword.tsx` components, authentication and password reset flows exposed the raw error object details (`err.message`) directly to the user in a toast notification if the API call failed. This could potentially leak internal stack traces or backend validation details to the end-user.
+**Learning:** Returning detailed backend exception messages directly to clients via UI toasts violates the principle of failing securely. While raw errors are useful for internal logs, frontend error notifications should provide generic, safe messages to prevent information exposure.
+**Prevention:** Always log raw error details to `console.error` for debugging purposes, but explicitly decouple this from the UI response by displaying a generic error message (e.g., "Authentication failed. Please try again.") in the user-facing notifications.
