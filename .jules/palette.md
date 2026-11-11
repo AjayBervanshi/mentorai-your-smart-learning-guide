@@ -14,3 +14,6 @@
 ## 2024-10-31 - Missing aria-label for placeholder-only input
 **Learning:** Input fields that rely entirely on placeholder text without an associated visible `<label>` lack accessible names for screen reader users, violating accessibility guidelines.
 **Action:** Always provide an `aria-label` attribute describing the input's purpose when using placeholder-only `<Input>` components.
+## 2024-11-11 - Hover-hidden interactive elements accessibility
+**Learning:** Hiding secondary interactive elements (like a delete button) with `opacity-0 group-hover:opacity-100` makes them inaccessible to keyboard users because they remain invisible when tabbed to.
+**Action:** Always pair `opacity-0 group-hover:opacity-100` with `focus-visible:opacity-100` and focus ring classes (e.g., `focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`) to ensure keyboard accessibility.
